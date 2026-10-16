@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "miras-store",
+  "main": "worker/index.js",
+  "compatibility_date": "2025-03-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": {
+    "BRAND_NAME": "MIRAS",
+    "ENVIRONMENT": "production",
+    "JWT_SECRET": "miras-prod-jwt-secret-key-2026-secure"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "miras-production-db",
+      "database_id": "76f1e937-6cc7-4f4b-b6d0-c6c4c85cc45f"
+    }
+  ]
+}

@@ -1,0 +1,336 @@
+/**
+ * MIRAS — Starter Product Catalog & Promo Codes
+ * You can edit, delete, or clear these starter items with one click in the Admin Dashboard (/admin)
+ * and list your own products.
+ */
+
+export const INITIAL_PRODUCTS = [
+  {
+    id: 'prod-001',
+    name: 'Hand-Loomed Kashmiri Pashmina Sozni Shawl',
+    slug: 'hand-loomed-kashmiri-pashmina-sozni-shawl',
+    shortDescription:
+      'Pure highland wool shawl finished with delicate hand-embroidered Sozni borders.',
+    description:
+      'Woven on traditional wooden looms from fine highland wool, this timeless shawl features intricate needlepoint Sozni floral borders. Featherlight, warm, and delivered in a signature gift box.',
+    category: 'Traditional & Cultural',
+    categorySlug: 'traditional-cultural',
+    brand: 'MIRAS Heritage',
+    price: 8500,
+    originalPrice: 10500,
+    sku: 'MRS-001',
+    stock: 15,
+    stockStatus: 'in_stock',
+    rating: 4.9,
+    reviewCount: 18,
+    featured: true,
+    isBestSeller: true,
+    isNew: true,
+    status: 'published',
+    images: [
+      'https://images.unsplash.com/photo-1606722590583-6951b5ea92ad?auto=format&fit=crop&w=1000&q=85',
+      'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=1000&q=85',
+    ],
+    variants: {
+      colors: [
+        { name: 'Warm Ivory', hex: '#EDE4D7' },
+        { name: 'Jet Black', hex: '#1C1917' },
+        { name: 'Deep Maroon', hex: '#6B2737' },
+      ],
+      sizes: ['Standard (100cm x 205cm)'],
+      materials: ['Pure Pashmina Wool Blend'],
+    },
+    specifications: {
+      Material: 'Highland Wool with Sozni Embroidery',
+      Dimensions: '100 cm × 205 cm',
+      Care: 'Dry clean recommended',
+    },
+    tags: ['shawl', 'pashmina', 'traditional', 'winter', 'gift'],
+    reviews: [
+      {
+        id: 'rev-1',
+        author: 'Ayesha K.',
+        location: 'Lahore',
+        rating: 5,
+        date: '2026-10-05',
+        title: 'Beautiful embroidery and very soft fabric',
+        comment: 'Ordered via Cash on Delivery and received within 2 days. Quality is outstanding.',
+      },
+    ],
+  },
+  {
+    id: 'prod-002',
+    name: 'Embroidered Raw Silk Festive Kurta Set',
+    slug: 'embroidered-raw-silk-festive-kurta-set',
+    shortDescription:
+      'Two-piece tailored raw silk tunic and trouser set with subtle antique Tilla neckline work.',
+    description:
+      'Designed for both festive gatherings and elevated evening wear. Tailored from breathable medium-weight raw silk with delicate Tilla embroidery along the neckline and sleeves.',
+    category: 'Fashion & Apparel',
+    categorySlug: 'fashion-apparel',
+    brand: 'MIRAS Studio',
+    price: 6800,
+    originalPrice: 7900,
+    sku: 'MRS-002',
+    stock: 20,
+    stockStatus: 'in_stock',
+    rating: 4.9,
+    reviewCount: 24,
+    featured: true,
+    isBestSeller: true,
+    isNew: true,
+    status: 'published',
+    images: [
+      'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=85',
+      'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1000&q=85',
+    ],
+    variants: {
+      colors: [
+        { name: 'Terracotta Rust', hex: '#B85338' },
+        { name: 'Olive Green', hex: '#4A5D4E' },
+        { name: 'Obsidian Black', hex: '#1C1917' },
+      ],
+      sizes: ['S', 'M', 'L', 'XL'],
+      materials: ['Raw Silk'],
+    },
+    specifications: {
+      Includes: 'Stitched Embroidered Shirt + Straight Trousers',
+      Fabric: 'Medium-weight Raw Silk',
+      Fit: 'Regular Relaxed Fit',
+    },
+    tags: ['kurta', 'fashion', 'silk', 'stitched', 'festive'],
+    reviews: [],
+  },
+  {
+    id: 'prod-003',
+    name: 'Full-Grain Leather Weekender & Travel Bag',
+    slug: 'full-grain-leather-weekender-travel-bag',
+    shortDescription:
+      'Handcrafted genuine leather travel duffle with solid brass hardware and padded shoulder strap.',
+    description:
+      'Built from durable full-grain leather that develops a rich character over time. Features a spacious main compartment, interior zippered pocket, and heavy-duty brass zippers.',
+    category: 'Watches, Jewelry & Bags',
+    categorySlug: 'accessories-watches',
+    brand: 'MIRAS Leather',
+    price: 11500,
+    originalPrice: 13500,
+    sku: 'MRS-003',
+    stock: 10,
+    stockStatus: 'in_stock',
+    rating: 5.0,
+    reviewCount: 14,
+    featured: true,
+    isBestSeller: true,
+    isNew: false,
+    status: 'published',
+    images: [
+      'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=1000&q=85',
+      'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=1000&q=85',
+    ],
+    variants: {
+      colors: [
+        { name: 'Cognac Brown', hex: '#9A4B26' },
+        { name: 'Dark Espresso', hex: '#3E2723' },
+      ],
+      sizes: ['Standard Cabin Size'],
+      materials: ['100% Genuine Leather'],
+    },
+    specifications: {
+      Dimensions: '50 cm × 25 cm × 27 cm',
+      Material: '100% Genuine Full-Grain Leather',
+      Hardware: 'Antique Brass Buckles & Zippers',
+    },
+    tags: ['bag', 'leather', 'accessories', 'travel'],
+    reviews: [],
+  },
+  {
+    id: 'prod-004',
+    name: 'Royal Oud & Damascus Rose Pure Attar Gift Set',
+    slug: 'royal-oud-damascus-rose-pure-attar-gift-set',
+    shortDescription:
+      'Long-lasting alcohol-free concentrated perfume oils in crystal bottles inside a velvet gift box.',
+    description:
+      'Our signature fragrance collection pairs smoky Cambodi Oud, Damascus Rose, and warm Amber Musk. 100% non-alcoholic concentrated perfume oil with 12+ hour projection.',
+    category: 'Gifts & Fragrances',
+    categorySlug: 'gifts-lifestyle',
+    brand: 'MIRAS Scents',
+    price: 3800,
+    originalPrice: 4500,
+    sku: 'MRS-004',
+    stock: 30,
+    stockStatus: 'in_stock',
+    rating: 4.9,
+    reviewCount: 32,
+    featured: true,
+    isBestSeller: true,
+    isNew: true,
+    status: 'published',
+    images: [
+      'https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=1000&q=85',
+      'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85',
+    ],
+    variants: {
+      colors: [{ name: 'Collector Gift Box', hex: '#C59B5F' }],
+      sizes: ['Set of 4 (6ml each)', '12ml Signature Bottle'],
+      materials: ['Pure Concentrated Perfume Oil'],
+    },
+    specifications: {
+      Longevity: '12–14 Hours',
+      Type: 'Alcohol-Free Pure Attar & EDP',
+      Packaging: 'Ready-to-gift Velvet Lined Box',
+    },
+    tags: ['perfume', 'attar', 'oud', 'gift', 'fragrance'],
+    reviews: [],
+  },
+  {
+    id: 'prod-005',
+    name: 'Heritage Kundan & Pearl Jhumka Earrings',
+    slug: 'heritage-kundan-pearl-jhumka-earrings',
+    shortDescription:
+      'Gold-plated traditional jhumka earrings handset with Kundan stones and freshwater pearl drops.',
+    description:
+      'Lightweight yet statement-making traditional earrings crafted with high-polish gold plating, uncut glass Kundan stones, and delicate pearl clusters.',
+    category: 'Watches, Jewelry & Bags',
+    categorySlug: 'accessories-watches',
+    brand: 'MIRAS Jewels',
+    price: 2950,
+    originalPrice: 3600,
+    sku: 'MRS-005',
+    stock: 18,
+    stockStatus: 'in_stock',
+    rating: 4.8,
+    reviewCount: 15,
+    featured: false,
+    isBestSeller: false,
+    isNew: true,
+    status: 'published',
+    images: [
+      'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=1000&q=85',
+      'https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=1000&q=85',
+    ],
+    variants: {
+      colors: [
+        { name: 'Antique Gold & Pearl', hex: '#C59B5F' },
+        { name: 'Ruby Gold', hex: '#6B2737' },
+      ],
+      sizes: ['Standard'],
+      materials: ['Gold-Plated Brass & Pearls'],
+    },
+    specifications: {
+      Weight: 'Lightweight comfortable wear',
+      Packaging: 'Jewelry keepsake box included',
+    },
+    tags: ['jewelry', 'earrings', 'jhumka', 'accessories', 'gift'],
+    reviews: [],
+  },
+  {
+    id: 'prod-006',
+    name: 'Multani Hand-Painted Ceramic Table Vase',
+    slug: 'multani-hand-painted-ceramic-table-vase',
+    shortDescription:
+      'Artisanal kiln-fired ceramic vase painted freehand in traditional cobalt and turquoise glazes.',
+    description:
+      'Handcrafted by master potters in Multan, this ceramic vessel brings timeless regional character to living rooms, dining tables, and office desks.',
+    category: 'Home & Décor',
+    categorySlug: 'home-decor',
+    brand: 'MIRAS Home',
+    price: 4200,
+    originalPrice: null,
+    sku: 'MRS-006',
+    stock: 12,
+    stockStatus: 'in_stock',
+    rating: 4.9,
+    reviewCount: 11,
+    featured: false,
+    isBestSeller: false,
+    isNew: true,
+    status: 'published',
+    images: [
+      'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=1000&q=85',
+      'https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?auto=format&fit=crop&w=1000&q=85',
+    ],
+    variants: {
+      colors: [
+        { name: 'Cobalt Blue & White', hex: '#1E3A8A' },
+        { name: 'Turquoise Floral', hex: '#0D9488' },
+      ],
+      sizes: ['28cm Height'],
+      materials: ['Glazed Ceramic'],
+    },
+    specifications: {
+      Height: '28 cm',
+      Packaging: 'Double-boxed shatter-proof foam packaging',
+    },
+    tags: ['home', 'decor', 'vase', 'multani', 'ceramics'],
+    reviews: [],
+  },
+];
+
+export const INITIAL_COUPONS = [
+  {
+    id: 'coup-1',
+    code: 'WELCOME10',
+    type: 'percentage',
+    value: 10,
+    minOrderAmount: 2000,
+    description: '10% OFF on orders above Rs. 2,000',
+    active: true,
+  },
+  {
+    id: 'coup-2',
+    code: 'FREESHIP',
+    type: 'free_shipping',
+    value: 0,
+    minOrderAmount: 1500,
+    description: 'Free Standard Delivery',
+    active: true,
+  },
+];
+
+export const INITIAL_ORDERS = [
+  {
+    id: 'ORD-1001',
+    createdAt: '2026-10-16T08:30:00Z',
+    customer: {
+      firstName: 'Ali',
+      lastName: 'Hassan',
+      email: 'ali.hassan@example.com',
+      phone: '0300 4567890',
+    },
+    shippingAddress: {
+      addressLine1: 'House 24, Street 8, DHA Phase 5',
+      city: 'Lahore',
+      postalCode: '54792',
+      country: 'Pakistan',
+    },
+    deliveryMethod: {
+      id: 'standard',
+      name: 'Standard Tracked Courier (TCS / Leopards)',
+      price: 0,
+    },
+    paymentMethod: 'cod',
+    paymentMethodName: 'Cash on Delivery (COD)',
+    paymentStatus: 'COD — Collect on Delivery',
+    orderStatus: 'Confirmed',
+    trackingNumber: 'Pending Dispatch',
+    items: [
+      {
+        productId: 'prod-001',
+        name: 'Hand-Loomed Kashmiri Pashmina Sozni Shawl',
+        sku: 'MRS-001',
+        price: 8500,
+        quantity: 1,
+        selectedColor: 'Warm Ivory',
+        selectedSize: 'Standard (100cm x 205cm)',
+        image:
+          'https://images.unsplash.com/photo-1606722590583-6951b5ea92ad?auto=format&fit=crop&w=400&q=80',
+      },
+    ],
+    subtotal: 8500,
+    discountAmount: 0,
+    couponCode: null,
+    shippingCost: 0,
+    taxAmount: 0,
+    total: 8500,
+  },
+];
