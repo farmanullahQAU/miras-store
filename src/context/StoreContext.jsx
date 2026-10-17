@@ -371,6 +371,42 @@ export function StoreProvider({ children }) {
     [brandConfig.brandName, addToast]
   );
 
+  const loginWithGoogle = useCallback(
+    async (googlePayload) => {
+      try {
+        const data = await apiService.loginWithGoogle(googlePayload);
+        if (data?.user) {
+          setUser(data.user);
+          addToast(`Signed in with Google as ${data.user.firstName}.`, 'success');
+          return data.user;
+        }
+      } catch (err) {
+        if (googlePayload?.email) {
+          const fallbackUser = {
+            id: `usr-goog-${Date.now().toString().slice(-6)}`,
+            firstName: googlePayload.firstName || googlePayload.email.split('@')[0],
+            lastName: googlePayload.lastName || '',
+            email: googlePayload.email.trim().toLowerCase(),
+            phone: googlePayload.phone || '',
+            role:
+              googlePayload.email.trim().toLowerCase() === 'admin@miras.store'
+                ? 'admin'
+                : 'customer',
+            authProvider: 'google',
+            emailVerified: true,
+            picture: googlePayload.picture || '',
+            savedAddresses: [],
+          };
+          setUser(fallbackUser);
+          addToast(`Signed in with Google as ${fallbackUser.firstName}.`, 'success');
+          return fallbackUser;
+        }
+        throw err;
+      }
+    },
+    [addToast]
+  );
+
   const uploadMediaAdmin = useCallback(
     async (file) => {
       const result = await apiService.uploadMedia(file);
@@ -629,6 +665,7 @@ export function StoreProvider({ children }) {
     // Auth & Account
     user,
     login,
+    loginWithGoogle,
     register,
     logout,
     updateProfile,

@@ -13,6 +13,7 @@ export default function ProductCard({ product }) {
   } = useStore();
 
   const [selectedColorIdx, setSelectedColorIdx] = useState(0);
+  const [selectedSizeIdx, setSelectedSizeIdx] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
 
@@ -20,7 +21,9 @@ export default function ProductCard({ product }) {
 
   const wished = isInWishlist(product.id);
   const colors = product.variants?.colors || [];
+  const sizes = product.variants?.sizes || [];
   const activeColor = colors[selectedColorIdx]?.name || colors[0]?.name || 'Standard';
+  const activeSize = sizes[selectedSizeIdx] || sizes[0] || 'Standard';
 
   const hasDiscount =
     product.originalPrice && Number(product.originalPrice) > Number(product.price);
@@ -38,14 +41,15 @@ export default function ProductCard({ product }) {
   const primaryImage = product.images?.[0] || '';
   const secondaryImage = product.images?.[1] || primaryImage;
 
-  const handleQuickAdd = (e) => {
+  const handleQuickAdd = (e, explicitSize = null) => {
     e.preventDefault();
     e.stopPropagation();
     if (isOutOfStock) return;
+    const chosenSize = explicitSize || activeSize;
     const added = addToCart(product, {
       quantity: 1,
       selectedColor: activeColor,
-      selectedSize: product.variants?.sizes?.[0] || 'Standard',
+      selectedSize: chosenSize,
     });
     if (added) {
       setJustAdded(true);
@@ -127,11 +131,34 @@ export default function ProductCard({ product }) {
           </button>
         </div>
 
-        {/* Quick Add-to-Cart Overlay Bar */}
-        <div className="absolute inset-x-3 bottom-3 opacity-100 sm:opacity-0 sm:translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
+        {/* Quick Add-to-Cart Overlay Bar with Khaadi/Diners Size Selector */}
+        <div className="absolute inset-x-3 bottom-3 opacity-100 sm:opacity-0 sm:translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 space-y-1.5">
+          {!isOutOfStock && sizes.length > 1 && (
+            <div className="hidden sm:flex items-center justify-center gap-1 bg-white/95 backdrop-blur-xs p-1.5 rounded shadow-sm">
+              {sizes.slice(0, 5).map((sz, idx) => (
+                <button
+                  key={sz}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSelectedSizeIdx(idx);
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase transition-colors cursor-pointer ${
+                    selectedSizeIdx === idx
+                      ? 'bg-[#1C1917] text-white'
+                      : 'text-stone-700 hover:bg-stone-200/70'
+                  }`}
+                >
+                  {sz}
+                </button>
+              ))}
+            </div>
+          )}
+
           <button
             type="button"
-            onClick={handleQuickAdd}
+            onClick={(e) => handleQuickAdd(e)}
             disabled={isOutOfStock}
             className={`w-full py-2.5 px-3 rounded text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md transition-colors cursor-pointer ${
               isOutOfStock
@@ -146,12 +173,12 @@ export default function ProductCard({ product }) {
             ) : justAdded ? (
               <>
                 <Check className="w-3.5 h-3.5" />
-                <span>Added to Bag</span>
+                <span>Added ({activeSize})</span>
               </>
             ) : (
               <>
                 <ShoppingBag className="w-3.5 h-3.5" />
-                <span>Add to Bag</span>
+                <span>Add to Bag {sizes.length > 1 ? `· ${activeSize}` : ''}</span>
               </>
             )}
           </button>

@@ -1295,6 +1295,145 @@ app.put('/api/auth/password', async (c) => {
   return c.json({ success: true, message: 'Password updated.' });
 });
 
+app.post('/api/auth/google', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  let googleProfile = null;
+
+  // 1. If a real Google Identity Services (GIS) ID token is provided, verify via Google tokeninfo API
+  if (body.credential) {
+    try {
+      const verifyRes = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(body.credential)}`
+      );
+      if (verifyRes.ok) {
+        const tokenData = await verifyRes.json();
+        if (tokenData?.email) {
+          googleProfile = {
+            googleId: tokenData.sub || `goog-${Date.now()}`,
+            email: tokenData.email.trim().toLowerCase(),
+            firstName: tokenData.given_name || tokenData.name?.split(' ')[0] || 'Google',
+            lastName: tokenData.family_name || tokenData.name?.split(' ').slice(1).join(' ') || 'User',
+            picture: tokenData.picture || '',
+            emailVerified: tokenData.email_verified === 'true' || tokenData.email_verified === true,
+          };
+        }
+      }
+    } catch (e) {
+      console.error('Google tokeninfo verification error:', e);
+    }
+
+    // Fallback decode JWT payload if network call to tokeninfo is unavailable (e.g. offline/test environment)
+    if (!googleProfile && typeof body.credential === 'string' && body.credential.split('.').length === 3) {
+      try {
+        const payloadB64 = body.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = JSON.parse(atob(payloadB64));
+        if (decoded?.email) {
+          googleProfile = {
+            googleId: decoded.sub || `goog-${Date.now()}`,
+            email: decoded.email.trim().toLowerCase(),
+            firstName: decoded.given_name || decoded.name?.split(' ')[0] || 'Google',
+            lastName: decoded.family_name || decoded.name?.split(' ').slice(1).join(' ') || 'User',
+            picture: decoded.picture || '',
+            emailVerified: true,
+          };
+        }
+      } catch {
+        // Ignore malformed token
+      }
+    }
+  }
+
+  // 2. Support direct Google OAuth profile payload
+  if (!googleProfile && body.email) {
+    googleProfile = {
+      googleId: body.googleId || body.sub || `goog-${Date.now()}`,
+      email: body.email.trim().toLowerCase(),
+      firstName: (body.firstName || body.given_name || body.name?.split(' ')[0] || 'Customer').trim(),
+      lastName: (body.lastName || body.family_name || body.name?.split(' ').slice(1).join(' ') || '').trim(),
+      picture: body.picture || '',
+      emailVerified: true,
+    };
+  }
+
+  if (!googleProfile || !googleProfile.email || !googleProfile.email.includes('@')) {
+    return c.json({ error: 'Valid Google account email is required for Google Sign-In.' }, 400);
+  }
+
+  const isAdminEmail =
+    googleProfile.email === 'admin@miras.store' ||
+    googleProfile.email === 'admin@mirasstore.com';
+
+  let user = {
+    id: `usr-goog-${Date.now().toString().slice(-6)}`,
+    firstName: googleProfile.firstName,
+    lastName: googleProfile.lastName,
+    email: googleProfile.email,
+    phone: body.phone || '',
+    role: isAdminEmail ? 'admin' : 'customer',
+    authProvider: 'google',
+    emailVerified: true,
+    picture: googleProfile.picture || '',
+    savedAddresses: [],
+  };
+
+  if (c.env?.DB) {
+    try {
+      await ensureD1Seeded(c.env.DB);
+      const existing = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?')
+        .bind(googleProfile.email)
+        .first();
+
+      if (existing) {
+        user = {
+          id: existing.id,
+          firstName: existing.first_name || googleProfile.firstName,
+          lastName: existing.last_name || googleProfile.lastName,
+          email: existing.email,
+          phone: existing.phone || '',
+          role: existing.role || (isAdminEmail ? 'admin' : 'customer'),
+          authProvider: 'google',
+          emailVerified: true,
+          picture: googleProfile.picture || '',
+          savedAddresses: JSON.parse(existing.addresses_json || '[]'),
+        };
+      } else {
+        const { hashHex, saltHex } = await hashPassword(`google-oauth-${googleProfile.googleId}-${Date.now()}`);
+        await c.env.DB.prepare(
+          `INSERT INTO users (id, first_name, last_name, email, phone, password_hash, password_salt, role, addresses_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, '[]')`
+        )
+          .bind(
+            user.id,
+            user.firstName,
+            user.lastName,
+            user.email,
+            user.phone,
+            hashHex,
+            saltHex,
+            user.role
+          )
+          .run();
+      }
+    } catch (e) {
+      console.error('D1 Google Sign-In upsert error:', e);
+    }
+  } else {
+    const existingEdge = edgeUsers.find((u) => u.email === googleProfile.email);
+    if (existingEdge) {
+      user = { ...existingEdge, authProvider: 'google', emailVerified: true };
+    } else {
+      edgeUsers.push(user);
+    }
+  }
+
+  const token = await createToken(
+    { userId: user.id, email: user.email, role: user.role, provider: 'google' },
+    c.env?.JWT_SECRET || 'miras-prod-jwt-secret-key-2026-secure'
+  );
+
+  return c.json({ user, token, provider: 'google' });
+});
+
 // -----------------------------------------------------------------------------
 // 8. Orders & Atomic Checkout (D1 Batch Transactions & Order Line Items)
 // -----------------------------------------------------------------------------

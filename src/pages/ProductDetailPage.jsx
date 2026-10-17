@@ -17,6 +17,8 @@ import {
   AlertCircle,
   ChevronRight,
   Sparkles,
+  Ruler,
+  MessageCircle,
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext.jsx';
 import { getEstimatedDeliveryRange } from '../utils/commerceEngine.js';
@@ -46,6 +48,8 @@ export default function ProductDetailPage() {
 
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [isZoomOpen, setIsZoomOpen] = useState(false);
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
+  const [sizeUnit, setSizeUnit] = useState('in'); // 'in' | 'cm'
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
@@ -384,11 +388,21 @@ export default function ProductDetailPage() {
 
               {product.variants?.sizes?.length > 0 && (
                 <div>
-                  <div className="flex justify-between text-xs mb-2">
+                  <div className="flex items-center justify-between text-xs mb-2">
                     <span className="font-semibold uppercase tracking-wider text-stone-700">
                       Size / Dimensions
                     </span>
-                    <span className="text-stone-500">{selectedSize || 'Select size'}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-stone-500">{selectedSize || 'Select size'}</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsSizeGuideOpen(true)}
+                        className="inline-flex items-center gap-1 text-[#B85338] hover:underline font-semibold cursor-pointer"
+                      >
+                        <Ruler className="w-3.5 h-3.5" />
+                        <span>Size & Fit Guide</span>
+                      </button>
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {product.variants.sizes.map((sz) => (
@@ -437,6 +451,14 @@ export default function ProductDetailPage() {
                       : `In Stock (${product.stock} units ready to ship)`}
                   </span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSizeGuideOpen(true)}
+                  className="text-[11px] font-semibold text-[#B85338] hover:underline inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <Ruler className="w-3 h-3" />
+                  <span>Fit & Care</span>
+                </button>
               </div>
             </div>
 
@@ -509,6 +531,19 @@ export default function ProductDetailPage() {
                   <Share2 className="w-4 h-4" />
                 </button>
               </div>
+
+              {/* Direct WhatsApp Inquiry CTA (Khaadi / Diners Concierge Style) */}
+              <a
+                href={`https://wa.me/${(brandConfig.whatsappNumber || brandConfig.contactPhone || '923001234567').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                  `Assalam-o-Alaikum ${brandConfig.brandName}! I would like to inquire about "${product.name}" (SKU: ${product.sku}, Price: ${formatPrice(product.price)}).`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2.5 px-4 rounded-md border border-emerald-700/30 bg-emerald-50/70 hover:bg-emerald-100/80 text-emerald-900 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
+              >
+                <MessageCircle className="w-4 h-4 text-emerald-700" />
+                <span>Inquire or Order via WhatsApp Concierge</span>
+              </a>
             </div>
 
             {/* Estimated Delivery & Trust Box */}
@@ -854,6 +889,130 @@ export default function ProductDetailPage() {
             className="max-w-full max-h-[90vh] object-contain rounded shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
+        </div>
+      )}
+
+      {/* Khaadi & Diners Inspired Size & Fit Guide Modal */}
+      {isSizeGuideOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Size and Fit Guide"
+          className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setIsSizeGuideOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl border border-stone-200 max-w-2xl w-full max-h-[88vh] overflow-y-auto p-6 sm:p-8 shadow-2xl space-y-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-4 border-b border-stone-200">
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#B85338]">
+                  {brandConfig.brandName} Tailoring & Fit Standard
+                </span>
+                <h2 className="font-serif text-2xl font-semibold text-[#1C1917] mt-0.5">
+                  Size & Measurement Guide
+                </h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="inline-flex rounded-lg border border-stone-300 p-0.5 bg-stone-100 text-xs font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setSizeUnit('in')}
+                    className={`px-2.5 py-1 rounded-md cursor-pointer ${
+                      sizeUnit === 'in' ? 'bg-[#1C1917] text-white' : 'text-stone-600'
+                    }`}
+                  >
+                    Inches
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSizeUnit('cm')}
+                    className={`px-2.5 py-1 rounded-md cursor-pointer ${
+                      sizeUnit === 'cm' ? 'bg-[#1C1917] text-white' : 'text-stone-600'
+                    }`}
+                  >
+                    CM
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSizeGuideOpen(false)}
+                  aria-label="Close Size Guide"
+                  className="p-2 rounded-full hover:bg-stone-100 text-stone-500 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Eastern Ready-to-Wear / Kurta / Kameez Chart */}
+            <div className="space-y-2.5">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#1C1917]">
+                Eastern Ready-to-Wear & Kurta Measurements ({sizeUnit.toUpperCase()})
+              </h3>
+              <div className="overflow-x-auto border border-stone-200 rounded-xl">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#F3EDE2] text-[#1C1917] font-semibold border-b border-stone-200">
+                    <tr>
+                      <th className="py-2.5 px-3">Size</th>
+                      <th className="py-2.5 px-3">Shoulder</th>
+                      <th className="py-2.5 px-3">Chest / Bust</th>
+                      <th className="py-2.5 px-3">Waist</th>
+                      <th className="py-2.5 px-3">Shirt Length</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-200 text-stone-700">
+                    {[
+                      { sz: 'XS', sh: 13.5, ch: 36, wa: 32, len: 37 },
+                      { sz: 'S', sh: 14.0, ch: 38, wa: 34, len: 38 },
+                      { sz: 'M', sh: 14.5, ch: 40, wa: 36, len: 39 },
+                      { sz: 'L', sh: 15.5, ch: 43, wa: 39, len: 40 },
+                      { sz: 'XL', sh: 16.5, ch: 46, wa: 42, len: 41 },
+                    ].map((row) => {
+                      const mult = sizeUnit === 'cm' ? 2.54 : 1;
+                      const fmt = (v) => (v * mult).toFixed(sizeUnit === 'cm' ? 0 : 1);
+                      return (
+                        <tr key={row.sz} className="hover:bg-stone-50">
+                          <td className="py-2.5 px-3 font-semibold text-[#1C1917]">{row.sz}</td>
+                          <td className="py-2.5 px-3">{fmt(row.sh)}</td>
+                          <td className="py-2.5 px-3">{fmt(row.ch)}</td>
+                          <td className="py-2.5 px-3">{fmt(row.wa)}</td>
+                          <td className="py-2.5 px-3">{fmt(row.len)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Unstitched Fabric & Shawl Standard Dimensions */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="p-4 rounded-xl bg-[#FAF7F2] border border-stone-200 space-y-1">
+                <p className="font-semibold text-[#1C1917]">3-Piece Unstitched Suit Standard</p>
+                <p className="text-stone-600">
+                  Shirt Fabric: 3.0 Meters · Dupatta / Shawl: 2.5 Meters · Trouser / Shalwar: 2.5 Meters.
+                </p>
+              </div>
+              <div className="p-4 rounded-xl bg-[#FAF7F2] border border-stone-200 space-y-1">
+                <p className="font-semibold text-[#1C1917]">Artisanal Shawls & Wraps</p>
+                <p className="text-stone-600">
+                  Full Generous Drape: 100 inches × 45 inches (254 cm × 114 cm). Hand-finished edges.
+                </p>
+              </div>
+            </div>
+
+            {/* Fabric Care Instructions */}
+            <div className="p-4 rounded-xl bg-[#F3EDE2]/70 border border-stone-200 text-xs space-y-1.5">
+              <p className="font-semibold text-[#1C1917]">
+                Fabric Care & Preservation Guidelines
+              </p>
+              <p className="text-stone-600 leading-relaxed">
+                Dry clean recommended for hand-embroidered, wool, silk, and artisanal pieces. For everyday cotton and lawn apparel, gentle cold hand-wash with mild detergent and dry in shade.
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>

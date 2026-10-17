@@ -7,6 +7,7 @@ import CartDrawer from './components/common/CartDrawer';
 import SearchOverlay from './components/common/SearchOverlay';
 import QuickViewModal from './components/product/QuickViewModal';
 import ToastContainer from './components/common/ToastContainer';
+import WhatsAppFloat from './components/common/WhatsAppFloat';
 
 // Code-split pages for lightning-fast performance and minimal initial bundle size
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -95,6 +96,7 @@ export default function App() {
       <CartDrawer />
       <SearchOverlay />
       <QuickViewModal />
+      <WhatsAppFloat />
       <ToastContainer />
     </div>
   );

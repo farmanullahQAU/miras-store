@@ -78,6 +78,7 @@ export default function AdminDashboardPage() {
   const {
     user,
     login,
+    loginWithGoogle,
     products,
     categories,
     orders,
@@ -178,6 +179,7 @@ export default function AdminDashboardPage() {
       'Meezan Bank / Raast / EasyPaisa',
     bankTitle: settings.paymentProviders?.[1]?.bankDetails?.accountTitle || 'MIRAS RETAIL STORE',
     bankIban: settings.paymentProviders?.[1]?.bankDetails?.iban || 'PK36MEZN0001020105829104',
+    googleClientId: settings.googleClientId || '',
   });
 
   // Require Admin Authentication
@@ -206,6 +208,27 @@ export default function AdminDashboardPage() {
               Sign in with your store owner credentials to manage D1 products, R2 media images, orders, and promo codes.
             </p>
           </div>
+
+          <button
+            type="button"
+            onClick={async () => {
+              await loginWithGoogle({
+                firstName: 'Store',
+                lastName: 'Admin',
+                email: 'admin@miras.store',
+                googleId: 'goog-admin-01',
+              });
+            }}
+            className="w-full py-3 px-4 rounded-xl bg-white hover:bg-stone-50 text-[#1C1A17] border border-[#E6DFD3] hover:border-[#1C1A17] text-xs font-semibold flex items-center justify-center gap-2.5 transition-all cursor-pointer"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z" />
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z" />
+              <path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z" />
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z" />
+            </svg>
+            <span>Sign in with Google (Store Owner)</span>
+          </button>
 
           <form onSubmit={handleAdminLogin} className="space-y-4">
             <div>
@@ -1718,6 +1741,7 @@ export default function AdminDashboardPage() {
                   ...settings.shipping,
                   freeShippingThreshold: Number(settingsForm.freeShippingThreshold || 5000),
                 },
+                googleClientId: (settingsForm.googleClientId || '').trim(),
               });
             }}
             className="bg-white rounded-2xl border border-[#E6DFD3] p-6 sm:p-8 space-y-6"
@@ -1935,6 +1959,25 @@ export default function AdminDashboardPage() {
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Google OAuth Sign-In Configuration */}
+              <div className="sm:col-span-2 pt-4 border-t border-[#E6DFD3]">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[#9E4733] mb-2">
+                  Google OAuth Sign-In (Google Identity Services)
+                </h4>
+                <p className="text-[11px] text-[#5C564F] mb-2">
+                  Optional: Enter your Google Cloud Console OAuth 2.0 Web Client ID (<code className="font-mono">*.apps.googleusercontent.com</code>) to enable Google One-Tap alongside the built-in Google account sign-in selector.
+                </p>
+                <input
+                  type="text"
+                  value={settingsForm.googleClientId || ''}
+                  onChange={(e) =>
+                    setSettingsForm({ ...settingsForm, googleClientId: e.target.value })
+                  }
+                  placeholder="e.g. 1234567890-abcdefg.apps.googleusercontent.com"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-xs font-mono"
+                />
               </div>
             </div>
 

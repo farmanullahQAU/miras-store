@@ -245,3 +245,42 @@ test('6. Hono Cloudflare Worker: Media upload (R2/fallback), Category CRUD, and 
   const robotsRes = await app.fetch(new Request('http://localhost/robots.txt'));
   assert.equal(robotsRes.status, 200);
 });
+
+test('7. Hono Cloudflare Worker: Google Sign-In (/api/auth/google) authenticates customer and admin profiles', async () => {
+  const googleCustomerRes = await app.fetch(
+    new Request('http://localhost/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        firstName: 'Amina',
+        lastName: 'Khalid',
+        email: 'amina.khalid@gmail.com',
+        googleId: 'goog-test-101',
+      }),
+    })
+  );
+  assert.equal(googleCustomerRes.status, 200);
+  const customerData = await googleCustomerRes.json();
+  assert.equal(customerData.provider, 'google');
+  assert.equal(customerData.user.email, 'amina.khalid@gmail.com');
+  assert.equal(customerData.user.role, 'customer');
+  assert.ok(customerData.token);
+
+  const googleAdminRes = await app.fetch(
+    new Request('http://localhost/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        firstName: 'Store',
+        lastName: 'Admin',
+        email: 'admin@miras.store',
+        googleId: 'goog-admin-01',
+      }),
+    })
+  );
+  assert.equal(googleAdminRes.status, 200);
+  const adminData = await googleAdminRes.json();
+  assert.equal(adminData.user.role, 'admin');
+  assert.ok(adminData.token);
+});
+

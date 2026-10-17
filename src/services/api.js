@@ -552,6 +552,17 @@ export const apiService = {
     return data;
   },
 
+  async loginWithGoogle(googlePayload) {
+    const data = await requestWorker('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify(googlePayload),
+    });
+    if (data?.token) {
+      localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, data.token);
+    }
+    return data;
+  },
+
   async trackOrder(orderId) {
     return await requestWorker(`/orders/track/${encodeURIComponent(orderId)}`);
   },
