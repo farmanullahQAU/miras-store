@@ -173,3 +173,17 @@ CREATE TABLE IF NOT EXISTS order_items (
 
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_product_id ON order_items(product_id);
+
+-- 9. Media Assets Registry (Tracks Cloudflare R2 Object Keys & Provides D1 Edge Fallback)
+CREATE TABLE IF NOT EXISTS media_assets (
+  key TEXT PRIMARY KEY,
+  filename TEXT NOT NULL,
+  content_type TEXT NOT NULL DEFAULT 'image/jpeg',
+  size_bytes INTEGER NOT NULL DEFAULT 0,
+  storage_driver TEXT NOT NULL DEFAULT 'r2',
+  base64_data TEXT DEFAULT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_media_assets_created_at ON media_assets(created_at DESC);
+

@@ -89,13 +89,19 @@ export default function CatalogPage({ mode = 'shop' }) {
         if (s.length <= 12) sizesSet.add(s);
       });
       (p.variants?.materials || []).forEach((m) => {
+        if (!m) return;
         if (m.includes('Wool')) materialsSet.add('Wool');
-        if (m.includes('Silk')) materialsSet.add('Silk');
-        if (m.includes('Cotton')) materialsSet.add('Cotton');
-        if (m.includes('Copper') || m.includes('Brass')) materialsSet.add('Brass & Copper');
-        if (m.includes('Leather')) materialsSet.add('Leather');
-        if (m.includes('Stoneware') || m.includes('Terracotta')) materialsSet.add('Ceramics');
-        if (m.includes('Walnut') || m.includes('Rosewood')) materialsSet.add('Wood');
+        else if (m.includes('Silk')) materialsSet.add('Silk');
+        else if (m.includes('Cotton')) materialsSet.add('Cotton');
+        else if (m.includes('Copper') || m.includes('Brass')) materialsSet.add('Brass & Copper');
+        else if (m.includes('Leather')) materialsSet.add('Leather');
+        else if (m.includes('Stoneware') || m.includes('Terracotta') || m.includes('Ceramic'))
+          materialsSet.add('Ceramics');
+        else if (m.includes('Walnut') || m.includes('Rosewood') || m.includes('Wood'))
+          materialsSet.add('Wood');
+        else if (m.trim().length > 0 && m.trim().length <= 28) {
+          materialsSet.add(m.trim());
+        }
       });
     });
 

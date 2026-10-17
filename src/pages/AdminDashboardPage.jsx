@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Package,
   Plus,
+  Minus,
   Trash2,
   Edit3,
   ShoppingBag,
@@ -19,6 +20,11 @@ import {
   Lock,
   Layers,
   Key,
+  Printer,
+  MessageCircle,
+  Truck,
+  X,
+  Database,
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import SEOHead from '../components/common/SEOHead';
@@ -78,11 +84,14 @@ export default function AdminDashboardPage() {
     coupons,
     settings,
     formatPrice,
+    uploadMediaAdmin,
     saveProductAdmin,
+    updateProductStockAdmin,
     deleteProductAdmin,
     clearAllProductsAdmin,
     restoreSampleProductsAdmin,
     saveCategoryAdmin,
+    deleteCategoryAdmin,
     changePasswordAdmin,
     updateOrderStatusAdmin,
     createCouponAdmin,
@@ -96,18 +105,23 @@ export default function AdminDashboardPage() {
   const [copiedId, setCopiedId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [confirmClearModal, setConfirmClearModal] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Admin quick sign-in state if not logged in as admin
   const [adminEmail, setAdminEmail] = useState('admin@miras.store');
   const [adminPassword, setAdminPassword] = useState('admin123');
 
-  // Category Form State
+  // Category Form State (Supports Create + Edit)
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [categoryForm, setCategoryForm] = useState({
     name: '',
     tagline: '',
     subtitle: '',
     image: '',
   });
+
+  // Order Tracking Drafts
+  const [trackingDrafts, setTrackingDrafts] = useState({});
 
   // Password Change State
   const [passwordForm, setPasswordForm] = useState({
@@ -118,7 +132,7 @@ export default function AdminDashboardPage() {
   // Product Form State
   const emptyForm = {
     name: '',
-    category: categories[0]?.slug || 'fashion-apparel',
+    category: categories[0]?.slug || 'traditional-cultural',
     price: '',
     compareAtPrice: '',
     stock: '20',
@@ -159,7 +173,9 @@ export default function AdminDashboardPage() {
     heroSubheading: settings.heroBanner?.subheading || '',
     heroImage: settings.heroBanner?.image || '',
     walletNumber: settings.paymentProviders?.[1]?.bankDetails?.accountNumber || '0300-1234567',
-    bankName: settings.paymentProviders?.[1]?.bankDetails?.bankName || 'Meezan Bank / Raast / EasyPaisa',
+    bankName:
+      settings.paymentProviders?.[1]?.bankDetails?.bankName ||
+      'Meezan Bank / Raast / EasyPaisa',
     bankTitle: settings.paymentProviders?.[1]?.bankDetails?.accountTitle || 'MIRAS RETAIL STORE',
     bankIban: settings.paymentProviders?.[1]?.bankDetails?.iban || 'PK36MEZN0001020105829104',
   });
@@ -168,7 +184,11 @@ export default function AdminDashboardPage() {
   if (!user || user.role !== 'admin') {
     const handleAdminLogin = async (e) => {
       e.preventDefault();
-      await login(adminEmail, adminPassword);
+      try {
+        await login(adminEmail, adminPassword);
+      } catch (err) {
+        addToast(err.message || 'Invalid credentials', 'error');
+      }
     };
 
     return (
@@ -183,7 +203,7 @@ export default function AdminDashboardPage() {
               Seller Admin Portal
             </h1>
             <p className="text-xs text-[#5C564F] mt-1">
-              Sign in with your store owner credentials to list products, manage orders, and run marketing promos.
+              Sign in with your store owner credentials to manage D1 products, R2 media images, orders, and promo codes.
             </p>
           </div>
 
@@ -199,7 +219,9 @@ export default function AdminDashboardPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Admin Password</label>
+              <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                Admin Password
+              </label>
               <input
                 type="password"
                 value={adminPassword}
@@ -224,28 +246,100 @@ export default function AdminDashboardPage() {
     .filter((o) => (o.orderStatus || o.status) !== 'Cancelled')
     .reduce((sum, o) => sum + Number(o.total ?? o.totals?.total ?? 0), 0);
 
-  const handleImageFileUpload = (e) => {
+  // Upload Product Images to Cloudflare R2
+  const handleImageFileUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setIsUploadingImage(true);
+    try {
+      const uploadedUrls = [];
+      for (const file of files) {
+        const res = await uploadMediaAdmin(file);
+        if (res?.url) {
+          uploadedUrls.push(res.url);
+        }
+      }
+      if (uploadedUrls.length > 0) {
+        setProductForm((prev) => {
+          const existing = prev.imagesText
+            .split('\n')
+            .map((s) => s.trim())
+            .filter(Boolean);
+          return {
+            ...prev,
+            imagesText: [...existing, ...uploadedUrls].join('\n'),
+          };
+        });
+        addToast(
+          `Uploaded ${uploadedUrls.length} image(s) to Cloudflare R2 storage.`,
+          'success'
+        );
+      }
+    } catch (err) {
+      addToast(err.message || 'Failed uploading image.', 'error');
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = '';
+    }
+  };
+
+  // Upload Category Cover Image to Cloudflare R2
+  const handleCategoryImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = String(reader.result);
-      setProductForm((prev) => ({
-        ...prev,
-        imagesText: prev.imagesText ? `${prev.imagesText}\n${result}` : result,
-      }));
-      addToast('Product image uploaded and added to gallery.', 'success');
-    };
-    reader.readAsDataURL(file);
+    setIsUploadingImage(true);
+    try {
+      const res = await uploadMediaAdmin(file);
+      if (res?.url) {
+        setCategoryForm((prev) => ({ ...prev, image: res.url }));
+        addToast('Category image uploaded to Cloudflare R2.', 'success');
+      }
+    } catch (err) {
+      addToast(err.message || 'Upload failed.', 'error');
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = '';
+    }
+  };
+
+  // Upload Hero Banner Image to Cloudflare R2
+  const handleHeroImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingImage(true);
+    try {
+      const res = await uploadMediaAdmin(file);
+      if (res?.url) {
+        setSettingsForm((prev) => ({ ...prev, heroImage: res.url }));
+        addToast('Hero banner image uploaded to Cloudflare R2.', 'success');
+      }
+    } catch (err) {
+      addToast(err.message || 'Upload failed.', 'error');
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = '';
+    }
+  };
+
+  const removeProductImageAt = (indexToRemove) => {
+    const list = productForm.imagesText
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const next = list.filter((_, idx) => idx !== indexToRemove);
+    setProductForm((prev) => ({ ...prev, imagesText: next.join('\n') }));
   };
 
   const handleEditProduct = (product) => {
     setEditingId(product.id);
     setProductForm({
       name: product.name || '',
-      category: product.categorySlug || product.category || 'fashion-apparel',
+      category: product.categorySlug || product.category || categories[0]?.slug || 'fashion-apparel',
       price: String(product.price || ''),
-      compareAtPrice: (product.originalPrice || product.compareAtPrice) ? String(product.originalPrice || product.compareAtPrice) : '',
+      compareAtPrice:
+        product.originalPrice || product.compareAtPrice
+          ? String(product.originalPrice || product.compareAtPrice)
+          : '',
       stock: String(product.stock ?? 20),
       sku: product.sku || '',
       shortDescription: product.shortDescription || '',
@@ -253,9 +347,16 @@ export default function AdminDashboardPage() {
       imagesText: (product.images || []).join('\n'),
       colorsText: formatColorsInput(product.variants?.colors || product.colors),
       sizesText: (product.variants?.sizes || product.sizes || ['Standard']).join(', '),
-      materials: product.variants?.materials?.[0] || product.materials || '',
-      origin: product.origin || 'Pakistan',
-      shippingEstimate: product.shippingEstimate || 'Dispatches within 24 hours',
+      materials:
+        product.variants?.materials?.[0] ||
+        product.specifications?.Material ||
+        product.materials ||
+        'Premium Handpicked Quality',
+      origin: product.specifications?.Origin || product.origin || 'Pakistan',
+      shippingEstimate:
+        product.specifications?.Dispatch ||
+        product.shippingEstimate ||
+        'Dispatches within 24 hours',
       isNew: Boolean(product.isNew),
       isBestSeller: Boolean(product.isBestSeller),
       isFeatured: Boolean(product.featured ?? product.isFeatured),
@@ -286,8 +387,8 @@ export default function AdminDashboardPage() {
     const payload = {
       ...(editingId ? { id: editingId } : {}),
       name: productForm.name.trim(),
-      category: selectedCat?.name || 'Fashion & Apparel',
-      categorySlug: productForm.category,
+      category: selectedCat?.name || 'Traditional & Cultural',
+      categorySlug: productForm.category || selectedCat?.slug || 'traditional-cultural',
       brand: settings.brandName || 'MIRAS',
       price: Number(productForm.price),
       originalPrice: productForm.compareAtPrice ? Number(productForm.compareAtPrice) : null,
@@ -299,7 +400,9 @@ export default function AdminDashboardPage() {
       images:
         images.length > 0
           ? images
-          : ['https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=1000&q=85'],
+          : [
+              'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=1000&q=85',
+            ],
       variants: {
         colors: parsedColors,
         sizes: parsedSizes.length > 0 ? parsedSizes : ['Standard'],
@@ -330,11 +433,107 @@ export default function AdminDashboardPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  // Printable Courier Packing Slip Generator
+  const printOrderPackingSlip = (order) => {
+    const totalAmount = order.total ?? order.totals?.total ?? 0;
+    const customerName =
+      order.customerName ||
+      `${order.customer?.firstName || ''} ${order.customer?.lastName || ''}`.trim();
+    const isCOD = order.paymentMethod === 'cod';
+    const itemsHtml = (order.items || [])
+      .map(
+        (item) => `
+        <tr>
+          <td style="padding:8px;border-bottom:1px solid #ddd;">${item.name} ${
+          item.selectedColor || item.selectedSize
+            ? `(${[item.selectedColor, item.selectedSize].filter(Boolean).join('/')})`
+            : ''
+        }</td>
+          <td style="padding:8px;border-bottom:1px solid #ddd;text-align:center;">${
+            item.quantity
+          }</td>
+          <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right;">${formatPrice(
+            item.lineTotal || item.price * item.quantity
+          )}</td>
+        </tr>`
+      )
+      .join('');
+
+    const win = window.open('', '_blank', 'width=800,height=700');
+    if (!win) return;
+    win.document.write(`
+      <html>
+        <head>
+          <title>Dispatch Slip - ${order.id}</title>
+          <style>
+            body { font-family: sans-serif; color: #1C1A17; padding: 24px; max-width: 700px; margin: 0 auto; }
+            .box { border: 2px solid #1C1A17; padding: 20px; border-radius: 8px; }
+            .header { display: flex; justify-content: space-between; border-bottom: 2px solid #1C1A17; padding-bottom: 12px; margin-bottom: 16px; }
+            .cod-banner { background: #1C1A17; color: #fff; padding: 12px 16px; border-radius: 6px; font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; margin: 16px 0; }
+            table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+            th { text-align: left; background: #f4f1ea; padding: 8px; border-bottom: 1px solid #1C1A17; }
+          </style>
+        </head>
+        <body>
+          <div class="box">
+            <div class="header">
+              <div>
+                <h1 style="margin:0;letter-spacing:3px;">${settings.brandName || 'MIRAS'}</h1>
+                <p style="margin:4px 0 0;font-size:12px;">${settings.contactPhone || ''}</p>
+              </div>
+              <div style="text-align:right;">
+                <h2 style="margin:0;">ORDER #${order.id}</h2>
+                <p style="margin:4px 0 0;font-size:12px;">Courier: ${
+                  order.courierName || 'TCS / Leopards'
+                } | Tracking: ${order.trackingNumber || 'Pending'}</p>
+                <p style="margin:2px 0 0;font-size:11px;">Date: ${new Date(
+                  order.createdAt
+                ).toLocaleDateString()}</p>
+              </div>
+            </div>
+            <div class="cod-banner">
+              <span>${isCOD ? 'CASH ON DELIVERY (COLLECT CASH)' : 'PREPAID ORDER'}</span>
+              <span>${isCOD ? formatPrice(totalAmount) : 'PAID (' + formatPrice(totalAmount) + ')'}</span>
+            </div>
+            <div style="font-size:14px;line-height:1.5;margin-bottom:16px;">
+              <strong>DELIVER TO:</strong><br/>
+              <strong>${customerName}</strong><br/>
+              Phone: <strong>${order.customer?.phone || ''}</strong><br/>
+              Address: ${order.shippingAddress?.addressLine1 || ''}, ${
+      order.shippingAddress?.city || ''
+    } ${order.shippingAddress?.state || ''} ${order.shippingAddress?.postalCode || ''}
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Item Description</th>
+                  <th style="text-align:center;">Qty</th>
+                  <th style="text-align:right;">Total</th>
+                </tr>
+              </thead>
+              <tbody>${itemsHtml}</tbody>
+            </table>
+            <div style="text-align:right;margin-top:16px;font-size:15px;">
+              <strong>Grand Total: ${formatPrice(totalAmount)}</strong>
+            </div>
+          </div>
+          <script>window.print();</script>
+        </body>
+      </html>
+    `);
+    win.document.close();
+  };
+
   const filteredProducts = products.filter(
     (p) =>
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (p.sku || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const previewImages = productForm.imagesText
+    .split('\n')
+    .map((u) => u.trim())
+    .filter(Boolean);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -343,14 +542,15 @@ export default function AdminDashboardPage() {
       {/* Top Seller Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-8 border-b border-[#E6DFD3]">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#9E4733]">
-            Cloudflare Worker + Hono Commerce Engine
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-[#9E4733]">
+            <Database className="w-3.5 h-3.5" />
+            Cloudflare D1 Database + R2 Media Storage Active
           </span>
           <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-[#1C1A17] mt-1">
             Seller Admin & Marketing Hub
           </h1>
           <p className="text-xs text-[#5C564F] mt-1">
-            List your products, copy ad links for Instagram/Facebook/TikTok, manage COD orders, and create promo codes.
+            Dynamically manage products, upload photos to Cloudflare R2, process COD orders, and print courier slips.
           </p>
         </div>
 
@@ -420,10 +620,18 @@ export default function AdminDashboardPage() {
       <div className="flex flex-wrap items-center gap-2 mb-8 border-b border-[#E6DFD3] pb-4">
         {[
           { id: 'products', label: `My Products (${products.length})`, icon: Package },
-          { id: 'add-product', label: editingId ? 'Edit Product' : '+ List New Product', icon: Plus },
+          {
+            id: 'add-product',
+            label: editingId ? 'Edit Product' : '+ List New Product',
+            icon: Plus,
+          },
           { id: 'categories', label: `Categories (${categories.length})`, icon: Layers },
           { id: 'orders', label: `Orders (${orders.length})`, icon: ShoppingBag },
-          { id: 'marketing', label: `Marketing & Promo Codes (${coupons.length})`, icon: Tag },
+          {
+            id: 'marketing',
+            label: `Marketing & Promo Codes (${coupons.length})`,
+            icon: Tag,
+          },
           { id: 'settings', label: 'Store & Brand Settings', icon: Settings },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -492,7 +700,7 @@ export default function AdminDashboardPage() {
                     Ready to start with a blank catalog for your own products?
                   </h4>
                   <p className="text-xs text-amber-800 mt-0.5">
-                    This will remove all current products so only the items you list will appear on the store.
+                    This will permanently remove all current products from Cloudflare D1 so only the items you list will appear on the store.
                   </p>
                 </div>
               </div>
@@ -525,12 +733,12 @@ export default function AdminDashboardPage() {
                 Your Product Catalog is Empty
               </h3>
               <p className="text-xs text-[#5C564F] max-w-md mx-auto">
-                Click the button below to list your first product with photos, sizes, colors, and pricing.
+                Click the button below to list your first product with photos uploaded directly to Cloudflare R2.
               </p>
               <button
                 type="button"
                 onClick={() => setActiveTab('add-product')}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#9E4733] text-white text-xs font-semibold uppercase tracking-widest"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#9E4733] text-white text-xs font-semibold uppercase tracking-widest cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 List Your First Product
@@ -545,7 +753,7 @@ export default function AdminDashboardPage() {
                       <th className="py-3.5 px-4">Product</th>
                       <th className="py-3.5 px-4">Category</th>
                       <th className="py-3.5 px-4">Price</th>
-                      <th className="py-3.5 px-4">Stock</th>
+                      <th className="py-3.5 px-4">Quick Stock Control</th>
                       <th className="py-3.5 px-4">Ad Link (For Marketing)</th>
                       <th className="py-3.5 px-4 text-right">Actions</th>
                     </tr>
@@ -561,32 +769,63 @@ export default function AdminDashboardPage() {
                               className="w-12 h-14 rounded-lg object-cover bg-[#EFECE6] shrink-0"
                             />
                             <div>
-                              <p className="font-semibold text-[#1C1A17]">{product.name}</p>
+                              <Link
+                                to={`/product/${product.slug}`}
+                                className="font-semibold text-[#1C1A17] hover:text-[#9E4733] transition-colors"
+                              >
+                                {product.name}
+                              </Link>
                               <p className="text-[11px] text-[#5C564F]">SKU: {product.sku}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="py-3.5 px-4 text-[#5C564F]">{product.categoryName || product.category}</td>
+                        <td className="py-3.5 px-4 text-[#5C564F]">
+                          {product.categoryName || product.category}
+                        </td>
                         <td className="py-3.5 px-4">
-                          <span className="font-semibold text-[#1C1A17]">{formatPrice(product.price)}</span>
-                          {product.compareAtPrice > product.price && (
+                          <span className="font-semibold text-[#1C1A17]">
+                            {formatPrice(product.price)}
+                          </span>
+                          {(product.originalPrice || product.compareAtPrice) > product.price && (
                             <span className="block text-[10px] text-[#5C564F] line-through">
-                              {formatPrice(product.compareAtPrice)}
+                              {formatPrice(product.originalPrice || product.compareAtPrice)}
                             </span>
                           )}
                         </td>
                         <td className="py-3.5 px-4">
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${
-                              product.stock > 5
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : product.stock > 0
-                                ? 'bg-amber-50 text-amber-700'
-                                : 'bg-red-50 text-red-700'
-                            }`}
-                          >
-                            {product.stock} in stock
-                          </span>
+                          <div className="inline-flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateProductStockAdmin(product.id, Math.max(0, product.stock - 1))
+                              }
+                              className="w-6 h-6 rounded border border-[#E6DFD3] bg-white hover:bg-[#EFECE6] flex items-center justify-center cursor-pointer"
+                              title="Decrease stock"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+                                product.stock > 5
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : product.stock > 0
+                                  ? 'bg-amber-50 text-amber-700'
+                                  : 'bg-red-50 text-red-700'
+                              }`}
+                            >
+                              {product.stock} in stock
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateProductStockAdmin(product.id, Number(product.stock || 0) + 1)
+                              }
+                              className="w-6 h-6 rounded border border-[#E6DFD3] bg-white hover:bg-[#EFECE6] flex items-center justify-center cursor-pointer"
+                              title="Increase stock"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
                         </td>
                         <td className="py-3.5 px-4">
                           <button
@@ -645,7 +884,7 @@ export default function AdminDashboardPage() {
                 {editingId ? 'Edit Product Listing' : 'Create New Product Listing'}
               </h2>
               <p className="text-xs text-[#5C564F]">
-                Fill in the details below. Your product will immediately appear in the store with full filter support.
+                Saved directly to Cloudflare D1 database with images hosted on Cloudflare R2.
               </p>
             </div>
             {editingId && (
@@ -655,7 +894,7 @@ export default function AdminDashboardPage() {
                   setEditingId(null);
                   setProductForm(emptyForm);
                 }}
-                className="text-xs text-[#9E4733] underline"
+                className="text-xs text-[#9E4733] underline cursor-pointer"
               >
                 Switch to New Product
               </button>
@@ -678,16 +917,14 @@ export default function AdminDashboardPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
-                Category *
-              </label>
+              <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Category *</label>
               <select
                 value={productForm.category}
                 onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
                 className="w-full px-4 py-2.5 rounded-xl border border-[#E6DFD3] text-sm bg-white"
               >
                 {categories.map((cat) => (
-                  <option key={cat.id} value={cat.slug}>
+                  <option key={cat.id || cat.slug} value={cat.slug}>
                     {cat.name}
                   </option>
                 ))}
@@ -776,28 +1013,52 @@ export default function AdminDashboardPage() {
               />
             </div>
 
-            {/* Image Upload & URLs */}
-            <div className="sm:col-span-2 space-y-2">
+            {/* Cloudflare R2 Image Upload & Gallery Preview */}
+            <div className="sm:col-span-2 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <label className="block text-xs font-semibold text-[#1C1A17]">
-                  Product Photos (Upload from your computer/phone or paste image URLs, one per line) *
+                  Product Photos (Upload directly to Cloudflare R2 or paste URLs) *
                 </label>
-                <label className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#EFECE6] hover:bg-[#1C1A17] hover:text-white text-xs font-semibold text-[#1C1A17] cursor-pointer transition-colors">
+                <label className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1C1A17] hover:bg-[#9E4733] text-white text-xs font-semibold cursor-pointer transition-colors">
                   <Upload className="w-3.5 h-3.5" />
-                  Upload Image File
+                  {isUploadingImage ? 'Uploading to R2...' : 'Upload Photos to Cloudflare R2'}
                   <input
                     type="file"
                     accept="image/*"
+                    multiple
+                    disabled={isUploadingImage}
                     onChange={handleImageFileUpload}
                     className="hidden"
                   />
                 </label>
               </div>
+
+              {previewImages.length > 0 && (
+                <div className="flex flex-wrap gap-3 p-3 rounded-xl bg-[#FBF9F5] border border-[#E6DFD3]">
+                  {previewImages.map((imgUrl, idx) => (
+                    <div
+                      key={idx}
+                      className="relative group w-20 h-24 rounded-lg overflow-hidden border border-[#E6DFD3] bg-white"
+                    >
+                      <img src={imgUrl} alt="" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeProductImageAt(idx)}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/75 text-white flex items-center justify-center opacity-90 hover:bg-red-600 cursor-pointer"
+                        title="Remove image"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <textarea
                 rows={3}
                 value={productForm.imagesText}
                 onChange={(e) => setProductForm({ ...productForm, imagesText: e.target.value })}
-                placeholder="https://images.unsplash.com/photo-..."
+                placeholder="Uploaded R2 URLs or external image URLs (one per line)..."
                 className="w-full px-4 py-2.5 rounded-xl border border-[#E6DFD3] text-xs font-mono"
               />
             </div>
@@ -809,7 +1070,9 @@ export default function AdminDashboardPage() {
               <input
                 type="text"
                 value={productForm.shortDescription}
-                onChange={(e) => setProductForm({ ...productForm, shortDescription: e.target.value })}
+                onChange={(e) =>
+                  setProductForm({ ...productForm, shortDescription: e.target.value })
+                }
                 placeholder="One-sentence hook shown on product cards and top of product page"
                 className="w-full px-4 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
               />
@@ -848,7 +1111,9 @@ export default function AdminDashboardPage() {
               <input
                 type="text"
                 value={productForm.shippingEstimate}
-                onChange={(e) => setProductForm({ ...productForm, shippingEstimate: e.target.value })}
+                onChange={(e) =>
+                  setProductForm({ ...productForm, shippingEstimate: e.target.value })
+                }
                 className="w-full px-4 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
               />
             </div>
@@ -868,7 +1133,9 @@ export default function AdminDashboardPage() {
                 <input
                   type="checkbox"
                   checked={productForm.isBestSeller}
-                  onChange={(e) => setProductForm({ ...productForm, isBestSeller: e.target.checked })}
+                  onChange={(e) =>
+                    setProductForm({ ...productForm, isBestSeller: e.target.checked })
+                  }
                   className="accent-[#9E4733]"
                 />
                 Mark as "Best Seller"
@@ -877,7 +1144,9 @@ export default function AdminDashboardPage() {
                 <input
                   type="checkbox"
                   checked={productForm.isFeatured}
-                  onChange={(e) => setProductForm({ ...productForm, isFeatured: e.target.checked })}
+                  onChange={(e) =>
+                    setProductForm({ ...productForm, isFeatured: e.target.checked })
+                  }
                   className="accent-[#9E4733]"
                 />
                 Feature on Homepage
@@ -895,7 +1164,7 @@ export default function AdminDashboardPage() {
             <button
               type="button"
               onClick={() => setActiveTab('products')}
-              className="px-5 py-3.5 rounded-xl border border-[#E6DFD3] text-xs font-semibold text-[#5C564F]"
+              className="px-5 py-3.5 rounded-xl border border-[#E6DFD3] text-xs font-semibold text-[#5C564F] cursor-pointer"
             >
               Cancel
             </button>
@@ -915,77 +1184,179 @@ export default function AdminDashboardPage() {
               </p>
             </div>
           ) : (
-            orders.map((order) => (
-              <div
-                key={order.id}
-                className="bg-white rounded-2xl border border-[#E6DFD3] p-5 sm:p-6 space-y-4"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#E6DFD3] pb-4">
-                  <div>
-                    <div className="flex items-center gap-2.5">
-                      <span className="font-mono text-sm font-bold text-[#1C1A17]">
-                        #{order.id}
-                      </span>
-                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#EFECE6] text-[#1C1A17] font-semibold">
-                        {order.paymentMethod === 'cod' ? 'Cash on Delivery' : `Prepaid (${order.paymentReference || 'Wallet'})`}
-                      </span>
-                    </div>
-                    <p className="text-xs text-[#5C564F] mt-1">
-                      Placed on {new Date(order.createdAt).toLocaleString()}
-                    </p>
-                  </div>
+            orders.map((order) => {
+              const orderTotal = order.total ?? order.totals?.total ?? 0;
+              const currentStatus = order.orderStatus || order.status || 'Confirmed';
+              const customerName =
+                order.customerName ||
+                `${order.customer?.firstName || ''} ${order.customer?.lastName || ''}`.trim();
+              const cleanCustomerPhone = (order.customer?.phone || '')
+                .replace(/[^0-9]/g, '')
+                .replace(/^0/, '92');
+              const draft = trackingDrafts[order.id] || {
+                courierName: order.courierName || 'TCS / Leopards',
+                trackingNumber: order.trackingNumber || 'Pending Dispatch',
+              };
 
-                  <div className="flex items-center gap-3">
-                    <select
-                      value={order.status}
-                      onChange={(e) => updateOrderStatusAdmin(order.id, e.target.value)}
-                      className="px-3.5 py-2 rounded-xl border border-[#E6DFD3] text-xs font-semibold bg-[#FBF9F5]"
-                    >
-                      <option value="Pending Confirmation">Pending Confirmation</option>
-                      <option value="Confirmed">Confirmed</option>
-                      <option value="Processing">Processing</option>
-                      <option value="Dispatched">Dispatched</option>
-                      <option value="Delivered">Delivered</option>
-                      <option value="Cancelled">Cancelled</option>
-                    </select>
-                    <span className="text-base font-bold text-[#9E4733]">
-                      {formatPrice(order.totals?.total || 0)}
-                    </span>
-                  </div>
-                </div>
+              const customerWhatsappText = encodeURIComponent(
+                `Assalam-o-Alaikum ${customerName}! Your ${
+                  settings.brandName || 'MIRAS'
+                } Order #${order.id} (${formatPrice(
+                  orderTotal
+                )}) is currently *${currentStatus}*. Courier: ${
+                  draft.courierName
+                } | Tracking: ${draft.trackingNumber}. Thank you for shopping with us!`
+              );
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  <div className="space-y-1">
-                    <p className="font-semibold text-[#1C1A17]">
-                      Customer: {order.customer?.firstName} {order.customer?.lastName}
-                    </p>
-                    <p className="text-[#5C564F]">Phone / WhatsApp: {order.customer?.phone}</p>
-                    <p className="text-[#5C564F]">
-                      Address: {order.shippingAddress?.addressLine1}, {order.shippingAddress?.city}, {order.shippingAddress?.state}
-                    </p>
-                    {order.orderNotes && (
-                      <p className="text-amber-800 bg-amber-50 px-2.5 py-1 rounded mt-1">
-                        Note: {order.orderNotes}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <p className="font-semibold text-[#1C1A17]">Items Ordered:</p>
-                    {(order.items || []).map((item, i) => (
-                      <div key={i} className="flex justify-between text-[#5C564F]">
-                        <span>
-                          {item.name} ({[item.selectedColor, item.selectedSize].filter(Boolean).join('/')}) × {item.quantity}
+              return (
+                <div
+                  key={order.id}
+                  className="bg-white rounded-2xl border border-[#E6DFD3] p-5 sm:p-6 space-y-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#E6DFD3] pb-4">
+                    <div>
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-mono text-sm font-bold text-[#1C1A17]">
+                          #{order.id}
                         </span>
-                        <span className="font-medium text-[#1C1A17]">
-                          {formatPrice(item.lineTotal || item.price * item.quantity)}
+                        <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#EFECE6] text-[#1C1A17] font-semibold">
+                          {order.paymentMethod === 'cod'
+                            ? 'Cash on Delivery (COD)'
+                            : `Prepaid (${order.paymentReference || 'Transfer'})`}
                         </span>
                       </div>
-                    ))}
+                      <p className="text-xs text-[#5C564F] mt-1">
+                        Placed on {new Date(order.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <select
+                        value={currentStatus}
+                        onChange={(e) =>
+                          updateOrderStatusAdmin(order.id, {
+                            orderStatus: e.target.value,
+                            status: e.target.value,
+                          })
+                        }
+                        className="px-3.5 py-2 rounded-xl border border-[#E6DFD3] text-xs font-semibold bg-[#FBF9F5]"
+                      >
+                        <option value="Pending Confirmation">Pending Confirmation</option>
+                        <option value="Confirmed">Confirmed</option>
+                        <option value="Processing">Processing</option>
+                        <option value="Dispatched">Dispatched</option>
+                        <option value="Delivered">Delivered</option>
+                        <option value="Cancelled">Cancelled</option>
+                      </select>
+
+                      {cleanCustomerPhone && (
+                        <a
+                          href={`https://wa.me/${cleanCustomerPhone}?text=${customerWhatsappText}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          WhatsApp Buyer
+                        </a>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => printOrderPackingSlip(order)}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#E6DFD3] hover:border-[#1C1A17] text-xs font-semibold text-[#1C1A17] cursor-pointer"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        Print Slip
+                      </button>
+
+                      <span className="text-base font-bold text-[#9E4733] ml-1">
+                        {formatPrice(orderTotal)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Courier & Tracking Assignment Bar */}
+                  <div className="flex flex-wrap items-center gap-2 bg-[#FBF9F5] p-3 rounded-xl border border-[#E6DFD3] text-xs">
+                    <Truck className="w-4 h-4 text-[#9E4733]" />
+                    <span className="font-semibold text-[#1C1A17]">Courier Dispatch:</span>
+                    <input
+                      type="text"
+                      value={draft.courierName}
+                      onChange={(e) =>
+                        setTrackingDrafts((prev) => ({
+                          ...prev,
+                          [order.id]: { ...draft, courierName: e.target.value },
+                        }))
+                      }
+                      placeholder="TCS / Leopards / PostEx"
+                      className="px-2.5 py-1.5 rounded-lg border border-[#E6DFD3] bg-white text-xs w-40"
+                    />
+                    <input
+                      type="text"
+                      value={draft.trackingNumber}
+                      onChange={(e) =>
+                        setTrackingDrafts((prev) => ({
+                          ...prev,
+                          [order.id]: { ...draft, trackingNumber: e.target.value },
+                        }))
+                      }
+                      placeholder="Tracking Number"
+                      className="px-2.5 py-1.5 rounded-lg border border-[#E6DFD3] bg-white text-xs font-mono w-44"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateOrderStatusAdmin(order.id, {
+                          courierName: draft.courierName,
+                          trackingNumber: draft.trackingNumber,
+                        })
+                      }
+                      className="px-3 py-1.5 rounded-lg bg-[#1C1A17] hover:bg-[#9E4733] text-white font-semibold cursor-pointer"
+                    >
+                      Save Tracking
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div className="space-y-1">
+                      <p className="font-semibold text-[#1C1A17]">Customer: {customerName}</p>
+                      <p className="text-[#5C564F]">Phone / WhatsApp: {order.customer?.phone}</p>
+                      <p className="text-[#5C564F]">
+                        Address: {order.shippingAddress?.addressLine1},{' '}
+                        {order.shippingAddress?.city}
+                        {order.shippingAddress?.state ? `, ${order.shippingAddress.state}` : ''}
+                      </p>
+                      {(order.orderNotes || order.notes) && (
+                        <p className="text-amber-800 bg-amber-50 px-2.5 py-1 rounded mt-1">
+                          Note: {order.orderNotes || order.notes}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <p className="font-semibold text-[#1C1A17]">Items Ordered:</p>
+                      {(order.items || []).map((item, i) => (
+                        <div key={i} className="flex justify-between text-[#5C564F]">
+                          <span>
+                            {item.name}{' '}
+                            {[item.selectedColor, item.selectedSize].filter(Boolean).length > 0
+                              ? `(${[item.selectedColor, item.selectedSize]
+                                  .filter(Boolean)
+                                  .join('/')})`
+                              : ''}{' '}
+                            × {item.quantity}
+                          </span>
+                          <span className="font-medium text-[#1C1A17]">
+                            {formatPrice(item.lineTotal || item.price * item.quantity)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       )}
@@ -1011,16 +1382,26 @@ export default function AdminDashboardPage() {
                   minSubtotal: Number(couponForm.minSubtotal || 0),
                   description: couponForm.description || 'Special campaign discount',
                 });
-                setCouponForm({ code: '', type: 'percentage', value: '10', minSubtotal: '0', description: '' });
+                setCouponForm({
+                  code: '',
+                  type: 'percentage',
+                  value: '10',
+                  minSubtotal: '0',
+                  description: '',
+                });
               }}
               className="space-y-4"
             >
               <div>
-                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Promo Code *</label>
+                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                  Promo Code *
+                </label>
                 <input
                   type="text"
                   value={couponForm.code}
-                  onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })}
+                  onChange={(e) =>
+                    setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })
+                  }
                   placeholder="e.g. INSTA15 or EID20"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm uppercase font-mono"
                   required
@@ -1028,7 +1409,9 @@ export default function AdminDashboardPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Discount Type</label>
+                  <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                    Discount Type
+                  </label>
                   <select
                     value={couponForm.type}
                     onChange={(e) => setCouponForm({ ...couponForm, type: e.target.value })}
@@ -1040,7 +1423,9 @@ export default function AdminDashboardPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Discount Value</label>
+                  <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                    Discount Value
+                  </label>
                   <input
                     type="number"
                     min="0"
@@ -1051,7 +1436,9 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Minimum Order Amount</label>
+                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                  Minimum Order Amount
+                </label>
                 <input
                   type="number"
                   min="0"
@@ -1085,7 +1472,7 @@ export default function AdminDashboardPage() {
                       : c.type === 'free_shipping'
                       ? 'Free Standard Delivery'
                       : `${formatPrice(c.value)} OFF`}{' '}
-                    • Min order: {formatPrice(c.minSubtotal || 0)}
+                    • Min order: {formatPrice(c.minOrderAmount ?? c.minSubtotal ?? 0)}
                   </p>
                 </div>
                 <button
@@ -1101,32 +1488,52 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* TAB: STORE CATEGORIES (DYNAMIC) */}
+      {/* TAB: STORE CATEGORIES (DYNAMIC CRUD + R2 IMAGE UPLOAD) */}
       {activeTab === 'categories' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-[#E6DFD3] space-y-4 h-fit">
-            <h3 className="font-serif text-xl font-semibold text-[#1C1A17]">
-              Create New Store Category
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-serif text-xl font-semibold text-[#1C1A17]">
+                {editingCategoryId ? 'Edit Category' : 'Create New Store Category'}
+              </h3>
+              {editingCategoryId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingCategoryId(null);
+                    setCategoryForm({ name: '', tagline: '', subtitle: '', image: '' });
+                  }}
+                  className="text-xs text-[#9E4733] underline cursor-pointer"
+                >
+                  Cancel Edit
+                </button>
+              )}
+            </div>
             <p className="text-xs text-[#5C564F]">
-              Add a new product category. It will immediately appear in the store menu, filters, and homepage.
+              Add or update a product category. Changes immediately update the header menu, shop filters, footer, and homepage.
             </p>
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (!categoryForm.name.trim()) return;
                 await saveCategoryAdmin({
+                  ...(editingCategoryId ? { id: editingCategoryId } : {}),
                   name: categoryForm.name.trim(),
                   tagline: categoryForm.tagline.trim(),
                   subtitle: categoryForm.subtitle.trim(),
-                  image: categoryForm.image.trim() || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&q=85',
+                  image:
+                    categoryForm.image.trim() ||
+                    'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&q=85',
                 });
+                setEditingCategoryId(null);
                 setCategoryForm({ name: '', tagline: '', subtitle: '', image: '' });
               }}
               className="space-y-4"
             >
               <div>
-                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Category Name *</label>
+                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                  Category Name *
+                </label>
                 <input
                   type="text"
                   value={categoryForm.name}
@@ -1137,7 +1544,9 @@ export default function AdminDashboardPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Tagline (Shown on Card)</label>
+                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                  Tagline (Shown on Card)
+                </label>
                 <input
                   type="text"
                   value={categoryForm.tagline}
@@ -1147,7 +1556,9 @@ export default function AdminDashboardPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Subtitle / Description</label>
+                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                  Subtitle / Description
+                </label>
                 <input
                   type="text"
                   value={categoryForm.subtitle}
@@ -1156,21 +1567,36 @@ export default function AdminDashboardPage() {
                   className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Cover Image URL</label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-[#1C1A17]">
+                    Cover Image (Upload to R2 or URL)
+                  </label>
+                  <label className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#EFECE6] hover:bg-[#1C1A17] hover:text-white text-[11px] font-semibold cursor-pointer transition-colors">
+                    <Upload className="w-3 h-3" />
+                    {isUploadingImage ? 'Uploading...' : 'Upload to R2'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isUploadingImage}
+                      onChange={handleCategoryImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
                 <input
-                  type="url"
+                  type="text"
                   value={categoryForm.image}
                   onChange={(e) => setCategoryForm({ ...categoryForm, image: e.target.value })}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
+                  placeholder="/api/media/... or https://..."
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-xs font-mono"
                 />
               </div>
               <button
                 type="submit"
                 className="w-full py-3 rounded-xl bg-[#1C1A17] hover:bg-[#9E4733] text-white text-xs font-semibold uppercase tracking-widest cursor-pointer"
               >
-                Save Category
+                {editingCategoryId ? 'Update Category' : 'Save Category'}
               </button>
             </form>
           </div>
@@ -1181,13 +1607,50 @@ export default function AdminDashboardPage() {
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {categories.map((c) => (
-                <div key={c.id || c.slug} className="bg-white p-4 rounded-2xl border border-[#E6DFD3] flex items-center gap-3">
-                  {c.image && (
-                    <img src={c.image} alt={c.name} className="w-14 h-14 rounded-xl object-cover shrink-0" />
-                  )}
-                  <div>
-                    <h4 className="font-semibold text-xs text-[#1C1A17]">{c.name}</h4>
-                    <p className="text-[11px] text-[#5C564F]">{c.tagline || c.subtitle || `/${c.slug}`}</p>
+                <div
+                  key={c.id || c.slug}
+                  className="bg-white p-4 rounded-2xl border border-[#E6DFD3] flex items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {c.image && (
+                      <img
+                        src={c.image}
+                        alt={c.name}
+                        className="w-14 h-14 rounded-xl object-cover shrink-0 bg-[#EFECE6]"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-xs text-[#1C1A17] truncate">{c.name}</h4>
+                      <p className="text-[11px] text-[#5C564F] truncate">
+                        {c.tagline || c.subtitle || `/${c.slug}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingCategoryId(c.id || c.slug);
+                        setCategoryForm({
+                          name: c.name || '',
+                          tagline: c.tagline || '',
+                          subtitle: c.subtitle || '',
+                          image: c.image || '',
+                        });
+                      }}
+                      className="p-2 rounded-lg border border-[#E6DFD3] hover:border-[#1C1A17] text-[#1C1A17] cursor-pointer"
+                      title="Edit Category"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteCategoryAdmin(c.id || c.slug)}
+                      className="p-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 cursor-pointer"
+                      title="Delete Category"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -1205,8 +1668,11 @@ export default function AdminDashboardPage() {
               await updateSettingsAdmin({
                 brandName: settingsForm.brandName,
                 brandTagline: settingsForm.brandTagline,
+                tagline: settingsForm.brandTagline,
                 contactPhone: settingsForm.contactPhone,
+                supportPhone: settingsForm.contactPhone,
                 contactEmail: settingsForm.contactEmail,
+                supportEmail: settingsForm.contactEmail,
                 heroBanner: {
                   ...settings.heroBanner,
                   heading: settingsForm.heroHeading,
@@ -1220,8 +1686,17 @@ export default function AdminDashboardPage() {
                   ctaText: 'Shop Now',
                   ctaLink: '/shop',
                 },
+                announcementBar: {
+                  enabled: true,
+                  message: settingsForm.announcementMessage,
+                  ctaLabel: 'Shop Now',
+                  ctaLink: '/shop',
+                },
                 paymentProviders: [
-                  settings.paymentProviders?.[0] || { id: 'cod', name: 'Cash on Delivery (COD)' },
+                  settings.paymentProviders?.[0] || {
+                    id: 'cod',
+                    name: 'Cash on Delivery (COD)',
+                  },
                   {
                     ...(settings.paymentProviders?.[1] || {}),
                     id: 'wallet_transfer',
@@ -1239,6 +1714,10 @@ export default function AdminDashboardPage() {
                   ...settings.currency,
                   freeShippingThreshold: Number(settingsForm.freeShippingThreshold || 5000),
                 },
+                shipping: {
+                  ...settings.shipping,
+                  freeShippingThreshold: Number(settingsForm.freeShippingThreshold || 5000),
+                },
               });
             }}
             className="bg-white rounded-2xl border border-[#E6DFD3] p-6 sm:p-8 space-y-6"
@@ -1249,7 +1728,9 @@ export default function AdminDashboardPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Store Brand Name</label>
+                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                  Store Brand Name
+                </label>
                 <input
                   type="text"
                   value={settingsForm.brandName}
@@ -1262,85 +1743,134 @@ export default function AdminDashboardPage() {
                 <input
                   type="text"
                   value={settingsForm.brandTagline}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, brandTagline: e.target.value })}
+                  onChange={(e) =>
+                    setSettingsForm({ ...settingsForm, brandTagline: e.target.value })
+                  }
                   className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Support / WhatsApp Phone</label>
+                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                  Support / WhatsApp Phone
+                </label>
                 <input
                   type="text"
                   value={settingsForm.contactPhone}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, contactPhone: e.target.value })}
+                  onChange={(e) =>
+                    setSettingsForm({ ...settingsForm, contactPhone: e.target.value })
+                  }
                   className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Support Email</label>
+                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                  Support Email
+                </label>
                 <input
                   type="email"
                   value={settingsForm.contactEmail}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, contactEmail: e.target.value })}
+                  onChange={(e) =>
+                    setSettingsForm({ ...settingsForm, contactEmail: e.target.value })
+                  }
                   className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Top Announcement Banner Message</label>
+                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                  Top Announcement Banner Message
+                </label>
                 <input
                   type="text"
                   value={settingsForm.announcementMessage}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, announcementMessage: e.target.value })}
+                  onChange={(e) =>
+                    setSettingsForm({ ...settingsForm, announcementMessage: e.target.value })
+                  }
                   className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Banner Promo Code Highlight</label>
+                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                  Banner Promo Code Highlight
+                </label>
                 <input
                   type="text"
                   value={settingsForm.announcementCode}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, announcementCode: e.target.value })}
+                  onChange={(e) =>
+                    setSettingsForm({ ...settingsForm, announcementCode: e.target.value })
+                  }
                   className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Free Shipping Threshold (PKR)</label>
+                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                  Free Shipping Threshold (PKR)
+                </label>
                 <input
                   type="number"
                   value={settingsForm.freeShippingThreshold}
-                  onChange={(e) => setSettingsForm({ ...settingsForm, freeShippingThreshold: e.target.value })}
+                  onChange={(e) =>
+                    setSettingsForm({ ...settingsForm, freeShippingThreshold: e.target.value })
+                  }
                   className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
                 />
               </div>
 
               {/* Hero Banner Section */}
               <div className="sm:col-span-2 pt-4 border-t border-[#E6DFD3]">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#9E4733] mb-3">Homepage Hero Banner</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[#9E4733] mb-3">
+                  Homepage Hero Banner
+                </h4>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Hero Main Heading</label>
+                    <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                      Hero Main Heading
+                    </label>
                     <input
                       type="text"
                       value={settingsForm.heroHeading}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, heroHeading: e.target.value })}
+                      onChange={(e) =>
+                        setSettingsForm({ ...settingsForm, heroHeading: e.target.value })
+                      }
                       className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Hero Subheading</label>
+                    <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                      Hero Subheading
+                    </label>
                     <input
                       type="text"
                       value={settingsForm.heroSubheading}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, heroSubheading: e.target.value })}
+                      onChange={(e) =>
+                        setSettingsForm({ ...settingsForm, heroSubheading: e.target.value })
+                      }
                       className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Hero Image URL</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-[#1C1A17]">
+                        Hero Image (Upload to R2 or URL)
+                      </label>
+                      <label className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#EFECE6] hover:bg-[#1C1A17] hover:text-white text-[11px] font-semibold cursor-pointer transition-colors">
+                        <Upload className="w-3 h-3" />
+                        {isUploadingImage ? 'Uploading...' : 'Upload Hero Photo to R2'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={isUploadingImage}
+                          onChange={handleHeroImageUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                     <input
-                      type="url"
+                      type="text"
                       value={settingsForm.heroImage}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, heroImage: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
+                      onChange={(e) =>
+                        setSettingsForm({ ...settingsForm, heroImage: e.target.value })
+                      }
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-xs font-mono"
                     />
                   </div>
                 </div>
@@ -1353,38 +1883,54 @@ export default function AdminDashboardPage() {
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-[#1C1A17] mb-1">EasyPaisa / JazzCash Number</label>
+                    <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                      EasyPaisa / JazzCash Number
+                    </label>
                     <input
                       type="text"
                       value={settingsForm.walletNumber}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, walletNumber: e.target.value })}
+                      onChange={(e) =>
+                        setSettingsForm({ ...settingsForm, walletNumber: e.target.value })
+                      }
                       className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Account Title</label>
+                    <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                      Account Title
+                    </label>
                     <input
                       type="text"
                       value={settingsForm.bankTitle}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, bankTitle: e.target.value })}
+                      onChange={(e) =>
+                        setSettingsForm({ ...settingsForm, bankTitle: e.target.value })
+                      }
                       className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Bank Name / Raast</label>
+                    <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                      Bank Name / Raast
+                    </label>
                     <input
                       type="text"
                       value={settingsForm.bankName}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, bankName: e.target.value })}
+                      onChange={(e) =>
+                        setSettingsForm({ ...settingsForm, bankName: e.target.value })
+                      }
                       className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Bank IBAN</label>
+                    <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                      Bank IBAN
+                    </label>
                     <input
                       type="text"
                       value={settingsForm.bankIban}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, bankIban: e.target.value })}
+                      onChange={(e) =>
+                        setSettingsForm({ ...settingsForm, bankIban: e.target.value })
+                      }
                       className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
                     />
                   </div>
@@ -1431,22 +1977,30 @@ export default function AdminDashboardPage() {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">New Password</label>
+                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                  New Password
+                </label>
                 <input
                   type="password"
                   value={passwordForm.newPassword}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                  onChange={(e) =>
+                    setPasswordForm({ ...passwordForm, newPassword: e.target.value })
+                  }
                   placeholder="At least 6 characters"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
                   required
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">Confirm New Password</label>
+                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                  Confirm New Password
+                </label>
                 <input
                   type="password"
                   value={passwordForm.confirmPassword}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  onChange={(e) =>
+                    setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
+                  }
                   placeholder="Repeat new password"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
                   required

@@ -371,13 +371,35 @@ export function StoreProvider({ children }) {
     [brandConfig.brandName, addToast]
   );
 
+  const uploadMediaAdmin = useCallback(
+    async (file) => {
+      const result = await apiService.uploadMedia(file);
+      return result;
+    },
+    []
+  );
+
   const saveCategoryAdmin = useCallback(
     async (categoryData) => {
       const saved = await apiService.saveCategory(categoryData);
-      const updated = await apiService.getCategories();
-      setCategories(updated);
+      const [updatedCats, updatedProds] = await Promise.all([
+        apiService.getCategories(),
+        apiService.getProducts(),
+      ]);
+      setCategories(updatedCats);
+      setProducts(updatedProds);
       addToast(`Category "${categoryData.name}" saved.`, 'success');
       return saved;
+    },
+    [addToast]
+  );
+
+  const deleteCategoryAdmin = useCallback(
+    async (categoryId) => {
+      await apiService.deleteCategory(categoryId);
+      const updated = await apiService.getCategories();
+      setCategories(updated);
+      addToast('Category removed.', 'info');
     },
     [addToast]
   );
@@ -457,12 +479,33 @@ export function StoreProvider({ children }) {
 
   const saveProductAdmin = useCallback(
     async (productData) => {
-      await apiService.saveProduct(productData);
+      const saved = await apiService.saveProduct(productData);
       const updated = await apiService.getProducts();
       setProducts(updated);
-      addToast(`Saved "${productData.name}".`, 'success');
+      addToast(
+        productData.id ? `Updated "${productData.name}".` : `Published "${productData.name}" to store.`,
+        'success'
+      );
+      return saved;
     },
     [addToast]
+  );
+
+  const updateProductStockAdmin = useCallback(
+    async (productId, nextStock) => {
+      const target = products.find((p) => p.id === productId);
+      if (!target) return;
+      const safeStock = Math.max(0, Number(nextStock));
+      await apiService.saveProduct({
+        ...target,
+        id: productId,
+        stock: safeStock,
+      });
+      const updated = await apiService.getProducts();
+      setProducts(updated);
+      addToast(`Updated stock for "${target.name}" to ${safeStock}.`, 'success');
+    },
+    [products, addToast]
   );
 
   const deleteProductAdmin = useCallback(
@@ -470,7 +513,7 @@ export function StoreProvider({ children }) {
       await apiService.deleteProduct(productId);
       const updated = await apiService.getProducts();
       setProducts(updated);
-      addToast('Product deleted.', 'info');
+      addToast('Product deleted from catalog.', 'info');
     },
     [addToast]
   );
@@ -524,9 +567,9 @@ export function StoreProvider({ children }) {
   const updateBrandConfig = useCallback(
     async (nextConfig) => {
       const merged = { ...brandConfig, ...nextConfig };
-      await apiService.updateStoreConfig(merged);
-      setBrandConfig(merged);
-      addToast('Store settings saved.', 'success');
+      const saved = await apiService.updateStoreConfig(merged);
+      setBrandConfig(saved || merged);
+      addToast('Store settings saved to Cloudflare D1.', 'success');
     },
     [brandConfig, addToast]
   );
@@ -548,7 +591,10 @@ export function StoreProvider({ children }) {
     updateSettingsAdmin: updateBrandConfig,
     formatPrice,
     products,
-    categories: categories && categories.length > 0 ? categories : (brandConfig.categories || DEFAULT_BRAND_CONFIG.categories),
+    categories:
+      categories && categories.length > 0
+        ? categories
+        : brandConfig.categories || DEFAULT_BRAND_CONFIG.categories,
     collections: brandConfig.collections || DEFAULT_BRAND_CONFIG.collections || [],
     coupons,
     orders,
@@ -593,11 +639,14 @@ export function StoreProvider({ children }) {
     // Checkout, Tracking & Admin
     placeOrder,
     trackOrderPublic,
+    uploadMediaAdmin,
     saveProductAdmin,
+    updateProductStockAdmin,
     deleteProductAdmin,
     clearAllProductsAdmin,
     restoreSampleProductsAdmin,
     saveCategoryAdmin,
+    deleteCategoryAdmin,
     updateOrderStatusAdmin,
     saveCouponAdmin,
     createCouponAdmin: saveCouponAdmin,

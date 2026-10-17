@@ -1,7 +1,7 @@
 /**
  * MIRAS — Frontend Service Layer connecting to the Hono Cloudflare Worker (/api/*)
- * Includes resilient local persistence so the storefront and admin work seamlessly
- * both locally and when deployed to Cloudflare Workers.
+ * Persists data to Cloudflare D1 (SQLite) and Cloudflare R2 (Object Storage),
+ * with local cache fallback for offline resilience.
  */
 
 import { DEFAULT_BRAND_CONFIG } from '../config/brandConfig.js';
@@ -14,6 +14,7 @@ import {
 
 const STORAGE_KEYS = {
   PRODUCTS: 'miras_products_v1',
+  CATEGORIES: 'miras_categories_v1',
   ORDERS: 'miras_orders_v1',
   COUPONS: 'miras_coupons_v1',
   CONFIG: 'miras_config_v1',
@@ -39,14 +40,15 @@ function writeStorage(key, value) {
 
 async function requestWorker(endpoint, options = {}) {
   const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   };
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 1800);
+  const timeout = setTimeout(() => controller.abort(), 15000);
 
   try {
     const response = await fetch(`/api${endpoint}`, {
@@ -67,6 +69,36 @@ async function requestWorker(endpoint, options = {}) {
 }
 
 export const apiService = {
+  async uploadMedia(file) {
+    if (!file) throw new Error('No file selected.');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const data = await requestWorker('/media/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      if (data?.url) {
+        return data;
+      }
+    } catch (err) {
+      console.warn('Worker R2 upload fallback to DataURL:', err.message);
+    }
+
+    // Offline fallback using FileReader DataURL
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () =>
+        resolve({
+          url: String(reader.result),
+          filename: file.name,
+          storage: 'local-dataurl',
+        });
+      reader.onerror = () => reject(new Error('Failed to read image file.'));
+      reader.readAsDataURL(file);
+    });
+  },
+
   async getStoreConfig() {
     try {
       const data = await requestWorker('/settings');
@@ -87,12 +119,15 @@ export const apiService = {
         method: 'PUT',
         body: JSON.stringify(updatedConfig),
       });
-      writeStorage(STORAGE_KEYS.CONFIG, data.config);
-      return data.config;
+      if (data?.config) {
+        writeStorage(STORAGE_KEYS.CONFIG, data.config);
+        return data.config;
+      }
     } catch {
-      writeStorage(STORAGE_KEYS.CONFIG, updatedConfig);
-      return updatedConfig;
+      // Fallback
     }
+    writeStorage(STORAGE_KEYS.CONFIG, updatedConfig);
+    return updatedConfig;
   },
 
   async getProducts() {
@@ -115,8 +150,9 @@ export const apiService = {
 
   async saveProduct(productData) {
     try {
-      const method = productData.id ? 'PUT' : 'POST';
-      const endpoint = productData.id ? `/products/${productData.id}` : '/products';
+      const isUpdating = Boolean(productData.id);
+      const method = isUpdating ? 'PUT' : 'POST';
+      const endpoint = isUpdating ? `/products/${productData.id}` : '/products';
       const data = await requestWorker(endpoint, {
         method,
         body: JSON.stringify(productData),
@@ -131,8 +167,9 @@ export const apiService = {
         return data.product;
       }
     } catch {
-      // Fallback
+      // Fallback to local storage when offline
     }
+
     const products = await this.getProducts();
     const slug =
       productData.slug ||
@@ -174,7 +211,7 @@ export const apiService = {
     } catch {
       // Fallback
     }
-    const products = await this.getProducts();
+    const products = readStorage(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
     writeStorage(
       STORAGE_KEYS.PRODUCTS,
       products.filter((p) => p.id !== productId)
@@ -193,11 +230,32 @@ export const apiService = {
   },
 
   async restoreSampleProducts() {
+    try {
+      const data = await requestWorker('/products/restore', { method: 'POST' });
+      if (Array.isArray(data?.products)) {
+        writeStorage(STORAGE_KEYS.PRODUCTS, data.products);
+        return data.products;
+      }
+    } catch {
+      // Fallback
+    }
     writeStorage(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
     return INITIAL_PRODUCTS;
   },
 
   async addProductReview(productId, reviewPayload) {
+    try {
+      const data = await requestWorker(`/products/${productId}/reviews`, {
+        method: 'POST',
+        body: JSON.stringify(reviewPayload),
+      });
+      if (data?.review) {
+        return data.review;
+      }
+    } catch {
+      // Fallback
+    }
+
     const products = await this.getProducts();
     const newReview = {
       id: `rev-${Date.now()}`,
@@ -242,7 +300,9 @@ export const apiService = {
   async createOrder(checkoutPayload) {
     const validation = validateCheckoutPayload(checkoutPayload);
     if (!validation.valid) {
-      throw new Error(Object.values(validation.errors)[0] || 'Please fill in all required fields.');
+      throw new Error(
+        Object.values(validation.errors)[0] || 'Please fill in all required fields.'
+      );
     }
 
     try {
@@ -254,7 +314,9 @@ export const apiService = {
         return serverRes.order;
       }
     } catch (err) {
-      if (err.message && err.message.includes('stock')) throw err;
+      if (err.message && (err.message.includes('stock') || err.message.includes('available'))) {
+        throw err;
+      }
     }
 
     const products = await this.getProducts();
@@ -297,7 +359,9 @@ export const apiService = {
           : 'Awaiting Transfer Screenshot',
       paymentReference: checkoutPayload.paymentReference || null,
       orderStatus: 'Confirmed',
+      status: 'Confirmed',
       trackingNumber: 'Pending Dispatch',
+      courierName: 'TCS / Leopards',
       items: checkoutPayload.items,
       subtotal: totals.subtotal,
       discountAmount: totals.discountAmount,
@@ -305,7 +369,15 @@ export const apiService = {
       shippingCost: totals.shippingCost,
       taxAmount: totals.taxAmount,
       total: totals.total,
+      totals: {
+        subtotal: totals.subtotal,
+        discountAmount: totals.discountAmount,
+        shippingCost: totals.shippingCost,
+        taxAmount: totals.taxAmount,
+        total: totals.total,
+      },
       notes: checkoutPayload.orderNotes || '',
+      orderNotes: checkoutPayload.orderNotes || '',
     };
 
     const updatedProducts = products.map((p) => {
@@ -327,10 +399,13 @@ export const apiService = {
 
   async updateOrderStatus(orderId, updates) {
     try {
-      await requestWorker(`/orders/${orderId}`, {
+      const res = await requestWorker(`/orders/${orderId}`, {
         method: 'PATCH',
         body: JSON.stringify(updates),
       });
+      if (res?.order) {
+        return res.order;
+      }
     } catch {
       // Fallback
     }
@@ -366,7 +441,10 @@ export const apiService = {
       });
       if (data?.coupon) {
         const coupons = await this.getCoupons();
-        writeStorage(STORAGE_KEYS.COUPONS, [data.coupon, ...coupons.filter((c) => c.code !== code)]);
+        writeStorage(STORAGE_KEYS.COUPONS, [
+          data.coupon,
+          ...coupons.filter((c) => c.code !== code),
+        ]);
         return data.coupon;
       }
     } catch {
@@ -375,7 +453,9 @@ export const apiService = {
 
     const coupons = await this.getCoupons();
     if (couponData.id && coupons.some((c) => c.id === couponData.id)) {
-      const updated = coupons.map((c) => (c.id === couponData.id ? { ...c, ...couponData, code } : c));
+      const updated = coupons.map((c) =>
+        c.id === couponData.id ? { ...c, ...couponData, code } : c
+      );
       writeStorage(STORAGE_KEYS.COUPONS, updated);
       return updated.find((c) => c.id === couponData.id);
     }
@@ -410,25 +490,44 @@ export const apiService = {
     try {
       const data = await requestWorker('/categories');
       if (Array.isArray(data?.categories)) {
+        writeStorage(STORAGE_KEYS.CATEGORIES, data.categories);
         return data.categories;
       }
     } catch {
       // Fallback
     }
-    return DEFAULT_BRAND_CONFIG.categories || [];
+    return readStorage(STORAGE_KEYS.CATEGORIES, DEFAULT_BRAND_CONFIG.categories || []);
   },
 
   async saveCategory(categoryData) {
     try {
-      const data = await requestWorker('/categories', {
-        method: 'POST',
-        body: JSON.stringify(categoryData),
-      });
+      const isEditing = Boolean(categoryData.id);
+      const data = await requestWorker(
+        isEditing ? `/categories/${categoryData.id}` : '/categories',
+        {
+          method: isEditing ? 'PUT' : 'POST',
+          body: JSON.stringify(categoryData),
+        }
+      );
       if (data?.category) return data.category;
     } catch {
       // Fallback
     }
     return categoryData;
+  },
+
+  async deleteCategory(categoryIdOrSlug) {
+    try {
+      await requestWorker(`/categories/${categoryIdOrSlug}`, { method: 'DELETE' });
+    } catch {
+      // Fallback
+    }
+    const current = readStorage(STORAGE_KEYS.CATEGORIES, DEFAULT_BRAND_CONFIG.categories || []);
+    writeStorage(
+      STORAGE_KEYS.CATEGORIES,
+      current.filter((c) => c.id !== categoryIdOrSlug && c.slug !== categoryIdOrSlug)
+    );
+    return true;
   },
 
   async login(credentials) {

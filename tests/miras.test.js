@@ -4,7 +4,6 @@ import app from '../worker/index.js';
 import {
   calculateOrderTotals,
   filterAndSortProducts,
-  validateCheckoutPayload,
 } from '../src/utils/commerceEngine.js';
 import { INITIAL_PRODUCTS, INITIAL_COUPONS } from '../src/data/productsData.js';
 
@@ -60,7 +59,7 @@ test('3. Hono Cloudflare Worker: /api/health and /api/products respond cleanly',
   assert.equal(prodBody.products.length, INITIAL_PRODUCTS.length);
 });
 
-test('4. Hono Cloudflare Worker: Admin can authenticate, list a new product, and create a promo code', async () => {
+test('4. Hono Cloudflare Worker: Admin can authenticate, list, edit, and delete a product, and manage promo codes', async () => {
   const loginRes = await app.fetch(
     new Request('http://localhost/api/auth/login', {
       method: 'POST',
@@ -101,6 +100,25 @@ test('4. Hono Cloudflare Worker: Admin can authenticate, list a new product, and
   const { product } = await createProdRes.json();
   assert.equal(product.name, 'Signature Hand-Stitched Leather Wallet');
   assert.equal(product.price, 3200);
+
+  // Edit product price & stock
+  const updateProdRes = await app.fetch(
+    new Request(`http://localhost/api/products/${product.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        price: 2950,
+        stock: 40,
+      }),
+    })
+  );
+  assert.equal(updateProdRes.status, 200);
+  const { product: editedProduct } = await updateProdRes.json();
+  assert.equal(editedProduct.price, 2950);
+  assert.equal(editedProduct.stock, 40);
 
   // Create marketing promo code
   const couponRes = await app.fetch(
@@ -168,4 +186,62 @@ test('5. Hono Cloudflare Worker: Places customer order with authoritative stock 
   const { products } = await prodRes.json();
   const updated = products.find((p) => p.id === targetProduct.id);
   assert.equal(updated.stock, initialStock - 2);
+});
+
+test('6. Hono Cloudflare Worker: Media upload (R2/fallback), Category CRUD, and Sitemap', async () => {
+  // Upload image via base64 JSON payload
+  const samplePngBase64 =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  const uploadRes = await app.fetch(
+    new Request('http://localhost/api/media/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filename: 'test-product.png',
+        contentType: 'image/png',
+        base64: samplePngBase64,
+      }),
+    })
+  );
+  assert.equal(uploadRes.status, 201);
+  const mediaBody = await uploadRes.json();
+  assert.ok(mediaBody.url.startsWith('/api/media/'));
+
+  // Serve uploaded media
+  const getMediaRes = await app.fetch(new Request(`http://localhost${mediaBody.url}`));
+  assert.equal(getMediaRes.status, 200);
+  assert.equal(getMediaRes.headers.get('content-type'), 'image/png');
+
+  // Create, edit, and delete category
+  const createCatRes = await app.fetch(
+    new Request('http://localhost/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Artisan Footwear',
+        tagline: 'Handcrafted Khussa',
+        subtitle: 'Traditional leather footwear',
+        image: mediaBody.url,
+      }),
+    })
+  );
+  assert.equal(createCatRes.status, 201);
+  const { category } = await createCatRes.json();
+  assert.equal(category.slug, 'artisan-footwear');
+
+  const delCatRes = await app.fetch(
+    new Request(`http://localhost/api/categories/${category.id}`, {
+      method: 'DELETE',
+    })
+  );
+  assert.equal(delCatRes.status, 200);
+
+  // Sitemap & Robots.txt
+  const sitemapRes = await app.fetch(new Request('http://localhost/sitemap.xml'));
+  assert.equal(sitemapRes.status, 200);
+  const xml = await sitemapRes.text();
+  assert.ok(xml.includes('<urlset'));
+
+  const robotsRes = await app.fetch(new Request('http://localhost/robots.txt'));
+  assert.equal(robotsRes.status, 200);
 });

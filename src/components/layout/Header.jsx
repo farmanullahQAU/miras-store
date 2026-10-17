@@ -213,12 +213,6 @@ export default function Header() {
             Best Sellers
           </NavLink>
 
-          {categories.slice(0, 2).map((cat) => (
-            <NavLink key={cat.id} to={`/category/${cat.slug}`} className={navLinkClass}>
-              {cat.name}
-            </NavLink>
-          ))}
-
           <NavLink
             to="/collections/sale"
             className="text-[13px] font-semibold tracking-wide text-[#B85338] hover:text-[#6B2737] py-2"
@@ -270,10 +264,22 @@ export default function Header() {
                   Shop All Products
                 </Link>
                 <Link
-                  to="/shop?onSale=true"
+                  to="/collections/new-arrivals"
+                  className="block px-3 py-2.5 rounded-md text-sm font-medium text-[#1C1917] hover:bg-stone-200/60"
+                >
+                  New Arrivals
+                </Link>
+                <Link
+                  to="/collections/best-sellers"
+                  className="block px-3 py-2.5 rounded-md text-sm font-medium text-[#1C1917] hover:bg-stone-200/60"
+                >
+                  Best Sellers
+                </Link>
+                <Link
+                  to="/collections/sale"
                   className="block px-3 py-2.5 rounded-md text-sm font-semibold text-[#B85338] hover:bg-stone-200/60"
                 >
-                  Special Offers & Discounts
+                  Special Offers & Sale
                 </Link>
               </div>
 
@@ -303,7 +309,7 @@ export default function Header() {
                 <Link to={user ? '/account' : '/login'} className="block px-3 py-2 font-medium">
                   {user ? `My Profile (${user.firstName})` : 'Sign In / Create Account'}
                 </Link>
-                <Link to="/account/orders" className="block px-3 py-2 font-medium">
+                <Link to="/track-order" className="block px-3 py-2 font-medium">
                   Track My Order
                 </Link>
                 <Link to="/wishlist" className="block px-3 py-2 font-medium">
