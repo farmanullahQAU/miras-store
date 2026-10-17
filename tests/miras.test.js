@@ -308,3 +308,54 @@ test('7. Hono Cloudflare Worker: Google Sign-In (/api/auth/google) authenticates
   assert.ok(sindhProducts.some((p) => p.name.includes('Ajrak')));
 });
 
+test('8. Hono Cloudflare Worker: Review moderation (create & delete) and full Store Settings persistence', async () => {
+  const targetProdId = INITIAL_PRODUCTS[0].id;
+
+  // 1. Add customer review
+  const addRevRes = await app.fetch(
+    new Request(`http://localhost/api/products/${targetProdId}/reviews`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        author: 'Farman Ullah',
+        location: 'Peshawar',
+        rating: 5,
+        title: 'Authentic Craftsmanship',
+        comment: 'Exceptional quality and fast courier delivery.',
+      }),
+    })
+  );
+  assert.equal(addRevRes.status, 201);
+  const { review } = await addRevRes.json();
+  assert.ok(review.id.startsWith('rev-'));
+
+  // 2. Delete review via Admin moderation endpoint
+  const delRevRes = await app.fetch(
+    new Request(`http://localhost/api/products/${targetProdId}/reviews/${review.id}`, {
+      method: 'DELETE',
+    })
+  );
+  assert.equal(delRevRes.status, 200);
+  const delBody = await delRevRes.json();
+  assert.equal(delBody.deleted, true);
+
+  // 3. Update Store Settings (shipping fees, lookbook banner, regional highlights)
+  const settingsRes = await app.fetch(
+    new Request('http://localhost/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        brandName: 'MIRAS',
+        lookbookBanner: {
+          heading: 'Updated Seasonal Heritage Lookbook',
+          description: 'Dynamic editorial banner updated from Admin.',
+        },
+      }),
+    })
+  );
+  assert.equal(settingsRes.status, 200);
+  const { config } = await settingsRes.json();
+  assert.equal(config.lookbookBanner.heading, 'Updated Seasonal Heritage Lookbook');
+});
+
+

@@ -628,6 +628,16 @@ export function StoreProvider({ children }) {
     [addToast]
   );
 
+  const deleteProductReviewAdmin = useCallback(
+    async (productId, reviewId) => {
+      await apiService.deleteProductReview(productId, reviewId);
+      const updated = await apiService.getProducts();
+      setProducts(updated);
+      addToast('Customer review removed.', 'info');
+    },
+    [addToast]
+  );
+
   const value = {
     brandConfig,
     settings: brandConfig,
@@ -697,6 +707,7 @@ export function StoreProvider({ children }) {
     createCouponAdmin: saveCouponAdmin,
     deleteCouponAdmin,
     submitProductReview,
+    deleteProductReviewAdmin,
 
     // UI State
     isCartDrawerOpen,

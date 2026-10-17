@@ -223,9 +223,64 @@ export const DEFAULT_BRAND_CONFIG = {
       subtitle: 'Limited-time savings across selected pieces',
     },
   ],
+
+  // Regional Cultural Spotlights (Editable in Admin -> Store Settings)
+  regionalHighlights: [
+    {
+      region: 'Kashmir',
+      title: 'Kashmir & Swat',
+      craft: 'Pashmina & Sozni Shawls',
+    },
+    {
+      region: 'Punjab',
+      title: 'Punjab & Multan',
+      craft: 'Blue Pottery & Lahori Tilla',
+    },
+    {
+      region: 'Sindh',
+      title: 'Sindh (Hala & Bhitshah)',
+      craft: 'Natural Indigo Ajrak & Ralli',
+    },
+    {
+      region: 'Balochistan',
+      title: 'Balochistan (Quetta)',
+      craft: 'Balochi Doch & Mirror Work',
+    },
+    {
+      region: 'Peshawar',
+      title: 'Khyber Pakhtunkhwa',
+      craft: 'Full-Grain Leather & Brass',
+    },
+    {
+      region: 'Hunza',
+      title: 'Gilgit & Chitral',
+      craft: 'Hand-Spun Patti Wool & Caps',
+    },
+  ],
+
+  // Editorial Lookbook & Collector's Edit (Editable in Admin -> Store Settings)
+  lookbookBanner: {
+    eyebrow: 'Seasonal Lookbook • Inspired by Heritage',
+    heading: 'Timeless Eastern Craft & Contemporary Silhouettes',
+    description:
+      'From hand-loomed Kashmiri & Swati shawls to tailored seasonal apparel and artisan brassware — crafted for everyday elegance and festive occasions.',
+    image:
+      'https://images.unsplash.com/photo-1606722590583-6951b5ea92ad?auto=format&fit=crop&w=1400&q=85',
+    primaryCtaText: 'Explore Heritage Edit',
+    primaryCtaLink: '/category/traditional-cultural',
+    secondaryCtaText: 'Shop Apparel',
+    secondaryCtaLink: '/category/fashion-apparel',
+    collectorEyebrow: "The Collector's Edit",
+    collectorHeading: 'Signature Oud Attars, Timepieces & Gifting',
+    collectorDescription:
+      'Complete your wardrobe with long-lasting artisanal fragrances, statement accessories, and presentation-ready gift boxes.',
+    collectorCtaText: 'Explore Gifts & Fragrances',
+    collectorCtaLink: '/category/gifts-lifestyle',
+  },
 };
 
 export function formatCurrency(amount, symbol = DEFAULT_BRAND_CONFIG.currencySymbol) {
   const num = Math.round(Number(amount) || 0);
   return `${symbol} ${num.toLocaleString('en-PK')}`;
 }
+

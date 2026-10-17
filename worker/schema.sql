@@ -1,7 +1,7 @@
 -- =============================================================================
--- MIRAS Commerce Engine — Production Cloudflare D1 (SQLite) Schema
+-- MIRAS Commerce Engine — Production Normalized 3NF Cloudflare D1 (SQLite) Schema
 -- Engineered for high-concurrency edge reads, atomic stock deductions,
--- normalized relational integrity, and indexed sub-millisecond queries.
+-- normalized relational integrity, RBAC security, and sub-millisecond indexed queries.
 -- =============================================================================
 
 PRAGMA foreign_keys = ON;
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS categories (
 CREATE INDEX IF NOT EXISTS idx_categories_slug ON categories(slug);
 CREATE INDEX IF NOT EXISTS idx_categories_active_sort ON categories(is_active, sort_order ASC);
 
--- 3. Users (Customers & Store Admins with PBKDF2-SHA256 Password Hashing)
+-- 3. Users (Customers & Store Admins with PBKDF2-SHA256 & OAuth 2.0 Identity)
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   first_name TEXT NOT NULL,
@@ -40,6 +40,10 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   password_salt TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'customer' CHECK (role IN ('customer', 'admin')),
+  auth_provider TEXT NOT NULL DEFAULT 'email',
+  google_sub TEXT DEFAULT NULL,
+  avatar_url TEXT DEFAULT '',
+  email_verified INTEGER NOT NULL DEFAULT 0,
   addresses_json TEXT NOT NULL DEFAULT '[]',
   wishlist_json TEXT NOT NULL DEFAULT '[]',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -48,8 +52,29 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_google_sub ON users(google_sub);
 
--- 4. Products Catalog
+-- 4. Normalized User Shipping Addresses (3NF Relational Table)
+CREATE TABLE IF NOT EXISTS user_addresses (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  label TEXT NOT NULL DEFAULT 'Home Residence',
+  recipient_name TEXT DEFAULT '',
+  phone TEXT DEFAULT '',
+  address_line1 TEXT NOT NULL,
+  address_line2 TEXT DEFAULT '',
+  city TEXT NOT NULL,
+  state TEXT DEFAULT 'Punjab',
+  postal_code TEXT DEFAULT '',
+  country TEXT NOT NULL DEFAULT 'Pakistan',
+  is_default INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_addresses_user_id ON user_addresses(user_id, is_default DESC);
+
+-- 5. Products Catalog (Core Entity with Indexed Regional Provenance)
 CREATE TABLE IF NOT EXISTS products (
   id TEXT PRIMARY KEY,
   slug TEXT NOT NULL UNIQUE,
@@ -57,8 +82,10 @@ CREATE TABLE IF NOT EXISTS products (
   name TEXT NOT NULL,
   short_description TEXT DEFAULT '',
   description TEXT DEFAULT '',
+  category_id TEXT DEFAULT NULL,
   category TEXT NOT NULL,
   category_slug TEXT NOT NULL,
+  cultural_origin TEXT NOT NULL DEFAULT 'Pakistan',
   brand TEXT NOT NULL DEFAULT 'MIRAS',
   price INTEGER NOT NULL CHECK (price >= 0),
   original_price INTEGER DEFAULT NULL,
@@ -80,12 +107,43 @@ CREATE TABLE IF NOT EXISTS products (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_products_slug ON products(slug);
 CREATE INDEX IF NOT EXISTS idx_products_status_category_price ON products(status, category_slug, price);
+CREATE INDEX IF NOT EXISTS idx_products_status_origin ON products(status, cultural_origin);
 CREATE INDEX IF NOT EXISTS idx_products_status_featured ON products(status, featured DESC, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_products_status_new ON products(status, is_new DESC, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_products_status_bestseller ON products(status, is_best_seller DESC, rating DESC);
 CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
 
--- 5. Product Reviews (Normalized for High-Volume Customer Reviews)
+-- 6. Normalized Product Media Gallery (3NF Table Linked to Cloudflare R2 Object Keys)
+CREATE TABLE IF NOT EXISTS product_images (
+  id TEXT PRIMARY KEY,
+  product_id TEXT NOT NULL,
+  url TEXT NOT NULL,
+  r2_key TEXT DEFAULT NULL,
+  alt_text TEXT DEFAULT '',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_images_product_sort ON product_images(product_id, sort_order ASC);
+
+-- 7. Normalized Product Variants (3NF Table for Color, Size, Material & Variant SKU/Stock)
+CREATE TABLE IF NOT EXISTS product_variants (
+  id TEXT PRIMARY KEY,
+  product_id TEXT NOT NULL,
+  variant_type TEXT NOT NULL CHECK (variant_type IN ('color', 'size', 'material')),
+  name TEXT NOT NULL,
+  hex_code TEXT DEFAULT '',
+  sku_suffix TEXT DEFAULT '',
+  stock INTEGER NOT NULL DEFAULT 20,
+  price_delta INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_variants_product_type ON product_variants(product_id, variant_type, sort_order ASC);
+
+-- 8. Product Reviews (Normalized for High-Volume Customer Reviews)
 CREATE TABLE IF NOT EXISTS product_reviews (
   id TEXT PRIMARY KEY,
   product_id TEXT NOT NULL,
@@ -102,7 +160,7 @@ CREATE TABLE IF NOT EXISTS product_reviews (
 
 CREATE INDEX IF NOT EXISTS idx_reviews_product_created ON product_reviews(product_id, created_at DESC);
 
--- 6. Marketing Promo Codes & Coupons
+-- 9. Marketing Promo Codes & Coupons
 CREATE TABLE IF NOT EXISTS coupons (
   id TEXT PRIMARY KEY,
   code TEXT NOT NULL UNIQUE,
@@ -120,7 +178,7 @@ CREATE TABLE IF NOT EXISTS coupons (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_coupons_code ON coupons(code);
 CREATE INDEX IF NOT EXISTS idx_coupons_active ON coupons(active, code);
 
--- 7. Customer Orders
+-- 10. Customer Orders
 CREATE TABLE IF NOT EXISTS orders (
   id TEXT PRIMARY KEY,
   idempotency_key TEXT UNIQUE,
@@ -155,7 +213,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_customer_email ON orders(customer_email, c
 CREATE INDEX IF NOT EXISTS idx_orders_customer_phone ON orders(customer_phone);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(order_status, created_at DESC);
 
--- 8. Normalized Order Line Items (For Fast Sales Analytics & Auditing)
+-- 11. Normalized Order Line Items (For Fast Sales Analytics & Auditing)
 CREATE TABLE IF NOT EXISTS order_items (
   id TEXT PRIMARY KEY,
   order_id TEXT NOT NULL,
@@ -174,7 +232,7 @@ CREATE TABLE IF NOT EXISTS order_items (
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_product_id ON order_items(product_id);
 
--- 9. Media Assets Registry (Tracks Cloudflare R2 Object Keys & Provides D1 Edge Fallback)
+-- 12. Media Assets Registry (Tracks Cloudflare R2 Object Keys & Provides D1 Edge Fallback)
 CREATE TABLE IF NOT EXISTS media_assets (
   key TEXT PRIMARY KEY,
   filename TEXT NOT NULL,
@@ -186,4 +244,3 @@ CREATE TABLE IF NOT EXISTS media_assets (
 );
 
 CREATE INDEX IF NOT EXISTS idx_media_assets_created_at ON media_assets(created_at DESC);
-

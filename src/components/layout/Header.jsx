@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import {
   Search,
@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ShieldCheck,
   Package,
+  MapPin,
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext.jsx';
 
@@ -17,6 +18,7 @@ export default function Header() {
   const {
     brandConfig,
     categories,
+    products,
     cartTotals,
     wishlist,
     user,
@@ -26,11 +28,13 @@ export default function Header() {
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isRegionDropdownOpen, setIsRegionDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
     setIsDropdownOpen(false);
+    setIsRegionDropdownOpen(false);
     setIsMobileMenuOpen(false);
   }, [location.pathname, location.search]);
 
@@ -39,6 +43,22 @@ export default function Header() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  // Derive distinct cultural regions dynamically from live products
+  const regionsList = useMemo(() => {
+    const map = new Map();
+    for (const p of products || []) {
+      const origin = p.culturalOrigin || p.origin || p.specifications?.Origin || '';
+      if (origin && !map.has(origin)) {
+        map.set(origin, {
+          name: origin,
+          craft: p.specifications?.Craft || p.category || 'Regional Craft',
+          image: p.images?.[0] || '',
+        });
+      }
+    }
+    return Array.from(map.values()).slice(0, 8);
+  }, [products]);
 
   const navLinkClass = ({ isActive }) =>
     `text-[13px] font-medium tracking-wide transition-colors py-2 ${
@@ -76,10 +96,14 @@ export default function Header() {
 
             <Link
               to="/admin"
-              className="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded bg-[#6B2737] text-white hover:bg-[#521C29] transition-colors"
+              className={`hidden md:inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded transition-colors ${
+                user?.role === 'admin'
+                  ? 'bg-[#6B2737] text-white hover:bg-[#521C29]'
+                  : 'text-stone-600 hover:text-[#1C1917] hover:bg-stone-200/60'
+              }`}
             >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Seller Admin</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-[#B85338]" />
+              <span>{user?.role === 'admin' ? 'Admin Console' : 'Seller Portal'}</span>
             </Link>
           </div>
 
@@ -205,6 +229,55 @@ export default function Header() {
             )}
           </div>
 
+          {/* Shop by Cultural Region Dropdown */}
+          {regionsList.length > 0 && (
+            <div
+              className="relative"
+              onMouseEnter={() => setIsRegionDropdownOpen(true)}
+              onMouseLeave={() => setIsRegionDropdownOpen(false)}
+            >
+              <button
+                type="button"
+                onClick={() => setIsRegionDropdownOpen((prev) => !prev)}
+                aria-expanded={isRegionDropdownOpen}
+                className="inline-flex items-center gap-1 text-[13px] font-medium tracking-wide text-[#1C1917] hover:text-[#B85338] py-2 cursor-pointer"
+              >
+                <MapPin className="w-3.5 h-3.5 text-[#B85338]" />
+                <span>Shop by Region</span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform ${
+                    isRegionDropdownOpen ? 'rotate-180 text-[#B85338]' : ''
+                  }`}
+                />
+              </button>
+
+              {isRegionDropdownOpen && (
+                <div className="absolute left-0 top-full pt-2 w-72 z-50">
+                  <div className="bg-white border border-stone-200 rounded-lg shadow-xl py-2">
+                    <div className="px-4 py-1.5 border-b border-stone-100">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-[#B85338]">
+                        Pakistani Regional Craftsmanship
+                      </p>
+                    </div>
+                    {regionsList.map((reg) => (
+                      <Link
+                        key={reg.name}
+                        to={`/shop?region=${encodeURIComponent(reg.name)}`}
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#FAF7F2] text-xs font-medium text-[#1C1917] hover:text-[#B85338] transition-colors"
+                      >
+                        <MapPin className="w-4 h-4 text-[#B85338] shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-semibold text-[#1C1917] truncate">{reg.name}</p>
+                          <p className="text-[10px] text-stone-500 truncate">{reg.craft}</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <NavLink to="/collections/new-arrivals" className={navLinkClass}>
             New Arrivals
           </NavLink>
@@ -304,6 +377,26 @@ export default function Header() {
                   ))}
                 </div>
               </div>
+
+              {regionsList.length > 0 && (
+                <div className="py-4 border-b border-stone-200">
+                  <p className="px-3 text-[11px] font-semibold uppercase tracking-widest text-[#B85338] mb-2">
+                    Shop by Cultural Region
+                  </p>
+                  <div className="space-y-1">
+                    {regionsList.map((reg) => (
+                      <Link
+                        key={reg.name}
+                        to={`/shop?region=${encodeURIComponent(reg.name)}`}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-stone-700 hover:bg-stone-200/60"
+                      >
+                        <MapPin className="w-3.5 h-3.5 text-[#B85338]" />
+                        <span>{reg.name}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="py-4 space-y-2 text-sm">
                 <Link to={user ? '/account' : '/login'} className="block px-3 py-2 font-medium">

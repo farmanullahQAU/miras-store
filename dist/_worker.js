@@ -1,18 +1,15 @@
-var __defProp = Object.defineProperty;
-var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
-
 // node_modules/hono/dist/request/constants.js
 var GET_MATCH_RESULT = /* @__PURE__ */ Symbol();
 
 // node_modules/hono/dist/utils/buffer.js
-var bufferToFormData = /* @__PURE__ */ __name((arrayBuffer, contentType) => {
+var bufferToFormData = (arrayBuffer, contentType) => {
   return new Response(arrayBuffer, { headers: { "Content-Type": contentType.replace(/^[^;]+/, (mediaType) => mediaType.toLowerCase()) } }).formData();
-}, "bufferToFormData");
+};
 
 // node_modules/hono/dist/utils/body.js
 var MAX_NESTED_OBJECTS = 1e4;
-var isRawRequest = /* @__PURE__ */ __name((request) => "headers" in request, "isRawRequest");
-var parseBody = /* @__PURE__ */ __name(async (request, options = /* @__PURE__ */ Object.create(null)) => {
+var isRawRequest = (request) => "headers" in request;
+var parseBody = async (request, options = /* @__PURE__ */ Object.create(null)) => {
   const { all = false, dot = false } = options;
   const mediaType = (isRawRequest(request) ? request.headers : request.raw.headers).get("Content-Type")?.split(";")[0].trim().toLowerCase();
   if (mediaType === "multipart/form-data" || mediaType === "application/x-www-form-urlencoded") return parseFormData(request, {
@@ -20,7 +17,7 @@ var parseBody = /* @__PURE__ */ __name(async (request, options = /* @__PURE__ */
     dot
   });
   return {};
-}, "parseBody");
+};
 async function parseFormData(request, options) {
   if (!isRawRequest(request) && request.bodyCache.formData) return convertFormDataToBodyData(await request.bodyCache.formData, options);
   const headers = isRawRequest(request) ? request.headers : request.raw.headers;
@@ -31,7 +28,6 @@ async function parseFormData(request, options) {
   if (formData) return convertFormDataToBodyData(formData, options);
   return {};
 }
-__name(parseFormData, "parseFormData");
 function convertFormDataToBodyData(formData, options) {
   const form = /* @__PURE__ */ Object.create(null);
   const nestingState = { count: 0 };
@@ -47,15 +43,14 @@ function convertFormDataToBodyData(formData, options) {
   });
   return form;
 }
-__name(convertFormDataToBodyData, "convertFormDataToBodyData");
-var handleParsingAllValues = /* @__PURE__ */ __name((form, key, value) => {
+var handleParsingAllValues = (form, key, value) => {
   if (form[key] !== void 0) {
     if (Array.isArray(form[key])) form[key].push(value);
     else form[key] = [form[key], value];
   } else if (!key.endsWith("[]")) form[key] = value;
   else form[key] = [value];
-}, "handleParsingAllValues");
-var handleParsingNestedValues = /* @__PURE__ */ __name((form, key, value, state) => {
+};
+var handleParsingNestedValues = (form, key, value, state) => {
   if (/(?:^|\.)__proto__\./.test(key)) return;
   let nestedForm = form;
   const keys = key.split(".", 34);
@@ -70,23 +65,23 @@ var handleParsingNestedValues = /* @__PURE__ */ __name((form, key, value, state)
       nestedForm = nestedForm[key2];
     }
   });
-}, "handleParsingNestedValues");
-var throwNestingLimitExceeded = /* @__PURE__ */ __name(() => {
+};
+var throwNestingLimitExceeded = () => {
   throw new Error("Nesting limit exceeded");
-}, "throwNestingLimitExceeded");
+};
 
 // node_modules/hono/dist/utils/url.js
-var splitPath = /* @__PURE__ */ __name((path) => {
+var splitPath = (path) => {
   const paths = path.split("/");
   if (paths[0] === "") paths.shift();
   return paths;
-}, "splitPath");
-var splitRoutingPath = /* @__PURE__ */ __name((routePath) => {
+};
+var splitRoutingPath = (routePath) => {
   const { groups, path } = extractGroupsFromPath(routePath);
   const paths = splitPath(path);
   return replaceGroupMarks(paths, groups);
-}, "splitRoutingPath");
-var extractGroupsFromPath = /* @__PURE__ */ __name((path) => {
+};
+var extractGroupsFromPath = (path) => {
   const groups = [];
   path = path.replace(/\{[^}]+\}/g, (match2, index) => {
     const mark = `@${index}`;
@@ -97,8 +92,8 @@ var extractGroupsFromPath = /* @__PURE__ */ __name((path) => {
     groups,
     path
   };
-}, "extractGroupsFromPath");
-var replaceGroupMarks = /* @__PURE__ */ __name((paths, groups) => {
+};
+var replaceGroupMarks = (paths, groups) => {
   for (let i = groups.length - 1; i >= 0; i--) {
     const [mark] = groups[i];
     for (let j = paths.length - 1; j >= 0; j--) if (paths[j].includes(mark)) {
@@ -107,9 +102,9 @@ var replaceGroupMarks = /* @__PURE__ */ __name((paths, groups) => {
     }
   }
   return paths;
-}, "replaceGroupMarks");
+};
 var patternCache = {};
-var getPattern = /* @__PURE__ */ __name((label, next) => {
+var getPattern = (label, next) => {
   if (label === "*") return "*";
   const match2 = label.match(/^\:([^\{\}]+)(?:\{(.+)\})?$/);
   if (match2) {
@@ -133,8 +128,8 @@ var getPattern = /* @__PURE__ */ __name((label, next) => {
     return patternCache[cacheKey];
   }
   return null;
-}, "getPattern");
-var tryDecode = /* @__PURE__ */ __name((str, decoder) => {
+};
+var tryDecode = (str, decoder) => {
   try {
     return decoder(str);
   } catch {
@@ -146,9 +141,9 @@ var tryDecode = /* @__PURE__ */ __name((str, decoder) => {
       }
     });
   }
-}, "tryDecode");
-var tryDecodeURI = /* @__PURE__ */ __name((str) => tryDecode(str, decodeURI), "tryDecodeURI");
-var getPath = /* @__PURE__ */ __name((request) => {
+};
+var tryDecodeURI = (str) => tryDecode(str, decodeURI);
+var getPath = (request) => {
   const url = request.url;
   const start = url.indexOf("/", url.indexOf(":") + 4);
   let i = start;
@@ -163,16 +158,16 @@ var getPath = /* @__PURE__ */ __name((request) => {
     } else if (charCode === 63 || charCode === 35) break;
   }
   return url.slice(start, i);
-}, "getPath");
-var getPathNoStrict = /* @__PURE__ */ __name((request) => {
+};
+var getPathNoStrict = (request) => {
   const result = getPath(request);
   return result.length > 1 && result.at(-1) === "/" ? result.slice(0, -1) : result;
-}, "getPathNoStrict");
-var mergePath = /* @__PURE__ */ __name((base, sub, ...rest) => {
+};
+var mergePath = (base, sub, ...rest) => {
   if (rest.length) sub = mergePath(sub, ...rest);
   return `${base?.[0] === "/" ? "" : "/"}${base}${sub === "/" ? "" : `${base?.at(-1) === "/" ? "" : "/"}${sub?.[0] === "/" ? sub.slice(1) : sub}`}`;
-}, "mergePath");
-var checkOptionalParameter = /* @__PURE__ */ __name((path) => {
+};
+var checkOptionalParameter = (path) => {
   if (path.charCodeAt(path.length - 1) !== 63 || !path.includes(":")) return null;
   const segments = path.split("/");
   const results = [];
@@ -190,13 +185,13 @@ var checkOptionalParameter = /* @__PURE__ */ __name((path) => {
     }
   });
   return results.filter((v, i, a) => a.indexOf(v) === i);
-}, "checkOptionalParameter");
-var tryDecodeURIComponent = /* @__PURE__ */ __name((str) => str.indexOf("%") !== -1 ? tryDecode(str, decodeURIComponent_) : str, "tryDecodeURIComponent");
-var _decodeURI = /* @__PURE__ */ __name((value) => {
+};
+var tryDecodeURIComponent = (str) => str.indexOf("%") !== -1 ? tryDecode(str, decodeURIComponent_) : str;
+var _decodeURI = (value) => {
   if (value.indexOf("+") !== -1) value = value.replace(/\+/g, " ");
   return tryDecodeURIComponent(value);
-}, "_decodeURI");
-var _getQueryParam = /* @__PURE__ */ __name((url, key, multiple) => {
+};
+var _getQueryParam = (url, key, multiple) => {
   const hashIndex = url.indexOf("#", 8);
   if (hashIndex !== -1) url = url.slice(0, hashIndex);
   let encoded;
@@ -239,18 +234,15 @@ var _getQueryParam = /* @__PURE__ */ __name((url, key, multiple) => {
     } else results[name] ??= value;
   }
   return key ? results[key] : results;
-}, "_getQueryParam");
+};
 var getQueryParam = _getQueryParam;
-var getQueryParams = /* @__PURE__ */ __name((url, key) => {
+var getQueryParams = (url, key) => {
   return _getQueryParam(url, key, true);
-}, "getQueryParams");
+};
 var decodeURIComponent_ = decodeURIComponent;
 
 // node_modules/hono/dist/request.js
 var HonoRequest = class {
-  static {
-    __name(this, "HonoRequest");
-  }
   /**
   * `.raw` can get the raw Request object.
   *
@@ -325,7 +317,7 @@ var HonoRequest = class {
   async parseBody(options) {
     return parseBody(this, options);
   }
-  #cachedBody = /* @__PURE__ */ __name((key) => {
+  #cachedBody = (key) => {
     const { bodyCache, raw: raw2 } = this;
     const cachedBody = bodyCache[key];
     if (cachedBody) return cachedBody;
@@ -335,7 +327,7 @@ var HonoRequest = class {
       return new Response(body, { headers: contentType ? { "Content-Type": contentType } : void 0 })[key]();
     });
     return bodyCache[key] = raw2[key]();
-  }, "#cachedBody");
+  };
   /**
   * `.json()` can parse Request body of type `application/json`
   *
@@ -525,13 +517,13 @@ var HtmlEscapedCallbackPhase = {
   BeforeStream: 2,
   Stream: 3
 };
-var raw = /* @__PURE__ */ __name((value, callbacks) => {
+var raw = (value, callbacks) => {
   const escapedString = new String(value);
   escapedString.isEscaped = true;
   escapedString.callbacks = callbacks;
   return escapedString;
-}, "raw");
-var resolveCallback = /* @__PURE__ */ __name(async (str, phase, preserveCallbacks, context, buffer) => {
+};
+var resolveCallback = async (str, phase, preserveCallbacks, context, buffer) => {
   if (typeof str === "object" && !(str instanceof String)) {
     if (!(str instanceof Promise)) str = str.toString();
     if (str instanceof Promise) str = await str;
@@ -547,21 +539,18 @@ var resolveCallback = /* @__PURE__ */ __name(async (str, phase, preserveCallback
   }))).then((res) => Promise.all(res.filter(Boolean).map((str2) => resolveCallback(str2, phase, false, context, buffer))).then(() => buffer[0]));
   if (preserveCallbacks) return raw(await resStr, callbacks);
   else return resStr;
-}, "resolveCallback");
+};
 
 // node_modules/hono/dist/context.js
 var TEXT_PLAIN = "text/plain; charset=UTF-8";
-var setDefaultContentType = /* @__PURE__ */ __name((contentType, headers) => {
+var setDefaultContentType = (contentType, headers) => {
   return {
     "Content-Type": contentType,
     ...headers
   };
-}, "setDefaultContentType");
-var createResponseInstance = /* @__PURE__ */ __name((body, init) => new Response(body, init), "createResponseInstance");
+};
+var createResponseInstance = (body, init) => new Response(body, init);
 var Context = class {
-  static {
-    __name(this, "Context");
-  }
   #rawRequest;
   #req;
   /**
@@ -687,23 +676,23 @@ var Context = class {
   * })
   * ```
   */
-  render = /* @__PURE__ */ __name((...args) => {
+  render = (...args) => {
     this.#renderer ??= (content) => this.html(content);
     return this.#renderer(...args);
-  }, "render");
+  };
   /**
   * Sets the layout for the response.
   *
   * @param layout - The layout to set.
   * @returns The layout function.
   */
-  setLayout = /* @__PURE__ */ __name((layout) => this.#layout = layout, "setLayout");
+  setLayout = (layout) => this.#layout = layout;
   /**
   * Gets the current layout for the response.
   *
   * @returns The current layout function.
   */
-  getLayout = /* @__PURE__ */ __name(() => this.#layout, "getLayout");
+  getLayout = () => this.#layout;
   /**
   * `.setRenderer()` can set the layout in the custom middleware.
   *
@@ -725,9 +714,9 @@ var Context = class {
   * })
   * ```
   */
-  setRenderer = /* @__PURE__ */ __name((renderer) => {
+  setRenderer = (renderer) => {
     this.#renderer = renderer;
-  }, "setRenderer");
+  };
   /**
   * `.header()` can set headers.
   *
@@ -748,16 +737,16 @@ var Context = class {
   * })
   * ```
   */
-  header = /* @__PURE__ */ __name((name, value, options) => {
+  header = (name, value, options) => {
     if (this.finalized) this.#res = createResponseInstance(this.#res.body, this.#res);
     const headers = this.#res ? this.#res.headers : this.#preparedHeaders ??= new Headers();
     if (value === void 0) headers.delete(name);
     else if (options?.append) headers.append(name, value);
     else headers.set(name, value);
-  }, "header");
-  status = /* @__PURE__ */ __name((status) => {
+  };
+  status = (status) => {
     this.#status = status;
-  }, "status");
+  };
   /**
   * `.set()` can set the value specified by the key.
   *
@@ -771,10 +760,10 @@ var Context = class {
   * })
   * ```
   */
-  set = /* @__PURE__ */ __name((key, value) => {
+  set = (key, value) => {
     this.#var ??= /* @__PURE__ */ new Map();
     this.#var.set(key, value);
-  }, "set");
+  };
   /**
   * `.get()` can use the value specified by the key.
   *
@@ -788,9 +777,9 @@ var Context = class {
   * })
   * ```
   */
-  get = /* @__PURE__ */ __name((key) => {
+  get = (key) => {
     return this.#var ? this.#var.get(key) : void 0;
-  }, "get");
+  };
   /**
   * `.var` can access the value of a variable.
   *
@@ -835,7 +824,7 @@ var Context = class {
       headers: responseHeaders ?? headers
     });
   }
-  newResponse = /* @__PURE__ */ __name((...args) => this.#newResponse(...args), "newResponse");
+  newResponse = (...args) => this.#newResponse(...args);
   /**
   * `.body()` can return the HTTP response.
   * You can set headers with `.header()` and set HTTP status code with `.status`.
@@ -857,7 +846,7 @@ var Context = class {
   * })
   * ```
   */
-  body = /* @__PURE__ */ __name((data, arg, headers) => this.#newResponse(data, arg, headers), "body");
+  body = (data, arg, headers) => this.#newResponse(data, arg, headers);
   /**
   * `.text()` can render text as `Content-Type:text/plain`.
   *
@@ -870,9 +859,9 @@ var Context = class {
   * })
   * ```
   */
-  text = /* @__PURE__ */ __name((text, arg, headers) => {
+  text = (text, arg, headers) => {
     return !this.#preparedHeaders && !this.#status && !arg && !headers && !this.finalized ? new Response(text) : this.#newResponse(text, arg, setDefaultContentType(TEXT_PLAIN, headers));
-  }, "text");
+  };
   /**
   * `.json()` can render JSON as `Content-Type:application/json`.
   *
@@ -885,13 +874,13 @@ var Context = class {
   * })
   * ```
   */
-  json = /* @__PURE__ */ __name((object, arg, headers) => {
+  json = (object, arg, headers) => {
     return this.#newResponse(JSON.stringify(object), arg, setDefaultContentType("application/json", headers));
-  }, "json");
-  html = /* @__PURE__ */ __name((html, arg, headers) => {
-    const res = /* @__PURE__ */ __name((html2) => this.#newResponse(html2, arg, setDefaultContentType("text/html; charset=UTF-8", headers)), "res");
+  };
+  html = (html, arg, headers) => {
+    const res = (html2) => this.#newResponse(html2, arg, setDefaultContentType("text/html; charset=UTF-8", headers));
     return typeof html === "object" ? resolveCallback(html, HtmlEscapedCallbackPhase.Stringify, false, {}).then(res) : res(html);
-  }, "html");
+  };
   /**
   * `.redirect()` can Redirect, default status code is 302.
   *
@@ -907,11 +896,11 @@ var Context = class {
   * })
   * ```
   */
-  redirect = /* @__PURE__ */ __name((location, status) => {
+  redirect = (location, status) => {
     const locationString = String(location);
     this.header("Location", !/[^\x00-\xFF]/.test(locationString) ? locationString : encodeURI(locationString));
     return this.newResponse(null, status ?? 302);
-  }, "redirect");
+  };
   /**
   * `.notFound()` can return the Not Found Response.
   *
@@ -924,14 +913,14 @@ var Context = class {
   * })
   * ```
   */
-  notFound = /* @__PURE__ */ __name(() => {
+  notFound = () => {
     this.#notFoundHandler ??= () => createResponseInstance();
     return this.#notFoundHandler(this);
-  }, "notFound");
+  };
 };
 
 // node_modules/hono/dist/compose.js
-var compose = /* @__PURE__ */ __name((middleware, onError, onNotFound) => {
+var compose = (middleware, onError, onNotFound) => {
   return (context, next) => {
     let index = -1;
     return dispatch(0);
@@ -958,9 +947,8 @@ var compose = /* @__PURE__ */ __name((middleware, onError, onNotFound) => {
       if (res && (context.finalized === false || isError)) context.res = res;
       return context;
     }
-    __name(dispatch, "dispatch");
   };
-}, "compose");
+};
 
 // node_modules/hono/dist/router.js
 var METHODS = [
@@ -974,30 +962,24 @@ var METHODS = [
 ];
 var MESSAGE_MATCHER_IS_ALREADY_BUILT = "Can not add a route since the matcher is already built.";
 var UnsupportedPathError = class extends Error {
-  static {
-    __name(this, "UnsupportedPathError");
-  }
 };
 
 // node_modules/hono/dist/utils/constants.js
 var COMPOSED_HANDLER = "__COMPOSED_HANDLER";
 
 // node_modules/hono/dist/hono-base.js
-var notFoundHandler = /* @__PURE__ */ __name((c) => {
+var notFoundHandler = (c) => {
   return c.text("404 Not Found", 404);
-}, "notFoundHandler");
-var errorHandler = /* @__PURE__ */ __name((err, c) => {
+};
+var errorHandler = (err, c) => {
   if ("getResponse" in err) {
     const res = err.getResponse();
     return c.newResponse(res.body, res);
   }
   console.error(err);
   return c.text("Internal Server Error", 500);
-}, "errorHandler");
+};
 var Hono = class Hono2 {
-  static {
-    __name(this, "Hono");
-  }
   get;
   post;
   put;
@@ -1086,7 +1068,7 @@ var Hono = class Hono2 {
       let handler;
       if (app2.errorHandler === errorHandler) handler = r.handler;
       else {
-        handler = /* @__PURE__ */ __name(async (c, next) => (await compose([], app2.errorHandler)(c, () => r.handler(c, next))).res, "handler");
+        handler = async (c, next) => (await compose([], app2.errorHandler)(c, () => r.handler(c, next))).res;
         handler[COMPOSED_HANDLER] = r.handler;
       }
       subApp.#addRoute(r.method, r.path, handler, r.basePath);
@@ -1127,10 +1109,10 @@ var Hono = class Hono2 {
   * })
   * ```
   */
-  onError = /* @__PURE__ */ __name((handler) => {
+  onError = (handler) => {
     this.errorHandler = handler;
     return this;
-  }, "onError");
+  };
   /**
   * `.notFound()` allows you to customize a Not Found Response.
   *
@@ -1146,10 +1128,10 @@ var Hono = class Hono2 {
   * })
   * ```
   */
-  notFound = /* @__PURE__ */ __name((handler) => {
+  notFound = (handler) => {
     this.#notFoundHandler = handler;
     return this;
-  }, "notFound");
+  };
   /**
   * `.mount()` allows you to mount applications built with other frameworks into your Hono application.
   *
@@ -1191,7 +1173,7 @@ var Hono = class Hono2 {
       if (typeof options === "function") optionHandler = options;
       else {
         optionHandler = options.optionHandler;
-        if (options.replaceRequest === false) replaceRequest = /* @__PURE__ */ __name((request) => request, "replaceRequest");
+        if (options.replaceRequest === false) replaceRequest = (request) => request;
         else replaceRequest = options.replaceRequest;
       }
     }
@@ -1215,11 +1197,11 @@ var Hono = class Hono2 {
         return new Request(url, request);
       };
     })();
-    const handler = /* @__PURE__ */ __name(async (c, next) => {
+    const handler = async (c, next) => {
       const res = await applicationHandler(replaceRequest(c.req.raw), ...getOptions(c));
       if (res) return res;
       await next();
-    }, "handler");
+    };
     this.#addRoute("ALL", mergePath(path, "*"), handler);
     return this;
   }
@@ -1282,9 +1264,9 @@ var Hono = class Hono2 {
   * @returns {Response | Promise<Response>} response of request
   *
   */
-  fetch = /* @__PURE__ */ __name((request, ...rest) => {
+  fetch = (request, ...rest) => {
     return this.#dispatch(request, rest[1], rest[0], request.method);
-  }, "fetch");
+  };
   /**
   * `.request()` is a useful method for testing.
   * You can pass a URL or pathname to send a GET request.
@@ -1297,11 +1279,11 @@ var Hono = class Hono2 {
   * ```
   * @see https://hono.dev/docs/api/hono#request
   */
-  request = /* @__PURE__ */ __name((input, requestInit, Env, executionCtx) => {
+  request = (input, requestInit, Env, executionCtx) => {
     if (input instanceof Request) return this.fetch(requestInit ? new Request(input, requestInit) : input, Env, executionCtx);
     input = input.toString();
     return this.fetch(new Request(/^https?:\/\//.test(input) ? input : `http://localhost${mergePath("/", input)}`, requestInit), Env, executionCtx);
-  }, "request");
+  };
   /**
   * `.fire()` automatically adds a global fetch event listener.
   * This can be useful for environments that adhere to the Service Worker API, such as non-ES module Cloudflare Workers.
@@ -1319,21 +1301,21 @@ var Hono = class Hono2 {
   * @see https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API
   * @see https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/
   */
-  fire = /* @__PURE__ */ __name(() => {
+  fire = () => {
     addEventListener("fetch", (event) => {
       event.respondWith(this.#dispatch(event.request, event, void 0, event.request.method));
     });
-  }, "fire");
+  };
 };
 
 // node_modules/hono/dist/router/utils.js
-var createNullObject = /* @__PURE__ */ __name(() => /* @__PURE__ */ Object.create(null), "createNullObject");
+var createNullObject = () => /* @__PURE__ */ Object.create(null);
 
 // node_modules/hono/dist/router/reg-exp-router/matcher.js
 var emptyParam = [];
 function match(method, path) {
   const matchers = this.buildAllMatchers();
-  const match2 = /* @__PURE__ */ __name(((method2, path2) => {
+  const match2 = ((method2, path2) => {
     const matcher = matchers[method2] || matchers["ALL"];
     const staticMatch = matcher[2][path2];
     if (staticMatch) return staticMatch;
@@ -1341,11 +1323,10 @@ function match(method, path) {
     if (!match3) return [[], emptyParam];
     const index = match3.indexOf("", 1);
     return [matcher[1][index], match3];
-  }), "match");
+  });
   this.match = match2;
   return match2(method, path);
 }
-__name(match, "match");
 
 // node_modules/hono/dist/router/reg-exp-router/node.js
 var LABEL_REG_EXP_STR = "[^/]+";
@@ -1361,11 +1342,7 @@ function compareKey(a, b) {
   else if (b === "[^/]+") return -1;
   return a.length === b.length ? a < b ? -1 : 1 : b.length - a.length;
 }
-__name(compareKey, "compareKey");
 var Node = class Node2 {
-  static {
-    __name(this, "Node");
-  }
   #index;
   #varIndex;
   #children = createNullObject();
@@ -1434,9 +1411,6 @@ var Node = class Node2 {
 
 // node_modules/hono/dist/router/reg-exp-router/trie.js
 var Trie = class {
-  static {
-    __name(this, "Trie");
-  }
   #context = { varIndex: 0 };
   #root = new Node();
   #index = 0;
@@ -1505,15 +1479,10 @@ var wildcardRegExpCache = createNullObject();
 function buildWildcardRegExp(path) {
   return wildcardRegExpCache[path] ??= new RegExp(`^${path.replace(/\/:[^/{}]+(?:\{\[\^\/]\+})?(?=[/{]|$)|\/?\*$|([.\\+*[^\]$()?{}|])/g, (match2, metaChar) => metaChar ? `\\${metaChar}` : match2 === "/*" ? TAIL_WILDCARD_REG_EXP_STR : match2 === "*" ? ".*" : `/:${LABEL_REG_EXP_STR}`)}$`);
 }
-__name(buildWildcardRegExp, "buildWildcardRegExp");
 function findMiddleware(middleware, path) {
   for (const k of Object.keys(middleware).sort((a, b) => b.length - a.length)) if (buildWildcardRegExp(k).test(path)) return [...middleware[k]];
 }
-__name(findMiddleware, "findMiddleware");
 var RegExpRouter = class {
-  static {
-    __name(this, "RegExpRouter");
-  }
   name = "RegExpRouter";
   #middleware;
   #routes;
@@ -1601,9 +1570,6 @@ var RegExpRouter = class {
 
 // node_modules/hono/dist/router/smart-router/router.js
 var SmartRouter = class {
-  static {
-    __name(this, "SmartRouter");
-  }
   name = "SmartRouter";
   #routers = [];
   #routes = [];
@@ -1653,9 +1619,6 @@ var SmartRouter = class {
 var emptyParams = createNullObject();
 var order = 0;
 var Node3 = class Node4 {
-  static {
-    __name(this, "Node");
-  }
   #methods = [];
   #children = createNullObject();
   #patterns = [];
@@ -1784,9 +1747,6 @@ var Node3 = class Node4 {
 
 // node_modules/hono/dist/router/trie-router/router.js
 var TrieRouter = class {
-  static {
-    __name(this, "TrieRouter");
-  }
   name = "TrieRouter";
   #node = new Node3();
   add(method, path, handler) {
@@ -1799,9 +1759,6 @@ var TrieRouter = class {
 
 // node_modules/hono/dist/hono.js
 var Hono3 = class extends Hono {
-  static {
-    __name(this, "Hono");
-  }
   /**
   * Creates an instance of the Hono class.
   *
@@ -1814,7 +1771,7 @@ var Hono3 = class extends Hono {
 };
 
 // node_modules/hono/dist/middleware/cors/index.js
-var cors = /* @__PURE__ */ __name((options) => {
+var cors = (options) => {
   const opts = {
     origin: "*",
     allowMethods: [
@@ -1846,11 +1803,10 @@ var cors = /* @__PURE__ */ __name((options) => {
       return () => methodsStr;
     } else return () => "";
   })(opts.allowMethods);
-  return /* @__PURE__ */ __name(async function cors2(c, next) {
+  return async function cors2(c, next) {
     function set(key, value) {
       c.res.headers.set(key, value);
     }
-    __name(set, "set");
     const allowOrigin = await findAllowOrigin(c.req.header("origin") || "", c);
     if (allowOrigin) set("Access-Control-Allow-Origin", allowOrigin);
     if (opts.credentials) set("Access-Control-Allow-Credentials", "true");
@@ -1879,8 +1835,8 @@ var cors = /* @__PURE__ */ __name((options) => {
     }
     await next();
     if (opts.origin !== "*") c.header("Vary", "Origin", { append: true });
-  }, "cors");
-}, "cors");
+  };
+};
 
 // src/config/brandConfig.js
 var DEFAULT_BRAND_CONFIG = {
@@ -2081,7 +2037,56 @@ var DEFAULT_BRAND_CONFIG = {
       slug: "sale",
       subtitle: "Limited-time savings across selected pieces"
     }
-  ]
+  ],
+  // Regional Cultural Spotlights (Editable in Admin -> Store Settings)
+  regionalHighlights: [
+    {
+      region: "Kashmir",
+      title: "Kashmir & Swat",
+      craft: "Pashmina & Sozni Shawls"
+    },
+    {
+      region: "Punjab",
+      title: "Punjab & Multan",
+      craft: "Blue Pottery & Lahori Tilla"
+    },
+    {
+      region: "Sindh",
+      title: "Sindh (Hala & Bhitshah)",
+      craft: "Natural Indigo Ajrak & Ralli"
+    },
+    {
+      region: "Balochistan",
+      title: "Balochistan (Quetta)",
+      craft: "Balochi Doch & Mirror Work"
+    },
+    {
+      region: "Peshawar",
+      title: "Khyber Pakhtunkhwa",
+      craft: "Full-Grain Leather & Brass"
+    },
+    {
+      region: "Hunza",
+      title: "Gilgit & Chitral",
+      craft: "Hand-Spun Patti Wool & Caps"
+    }
+  ],
+  // Editorial Lookbook & Collector's Edit (Editable in Admin -> Store Settings)
+  lookbookBanner: {
+    eyebrow: "Seasonal Lookbook \u2022 Inspired by Heritage",
+    heading: "Timeless Eastern Craft & Contemporary Silhouettes",
+    description: "From hand-loomed Kashmiri & Swati shawls to tailored seasonal apparel and artisan brassware \u2014 crafted for everyday elegance and festive occasions.",
+    image: "https://images.unsplash.com/photo-1606722590583-6951b5ea92ad?auto=format&fit=crop&w=1400&q=85",
+    primaryCtaText: "Explore Heritage Edit",
+    primaryCtaLink: "/category/traditional-cultural",
+    secondaryCtaText: "Shop Apparel",
+    secondaryCtaLink: "/category/fashion-apparel",
+    collectorEyebrow: "The Collector's Edit",
+    collectorHeading: "Signature Oud Attars, Timepieces & Gifting",
+    collectorDescription: "Complete your wardrobe with long-lasting artisanal fragrances, statement accessories, and presentation-ready gift boxes.",
+    collectorCtaText: "Explore Gifts & Fragrances",
+    collectorCtaLink: "/category/gifts-lifestyle"
+  }
 };
 
 // src/data/productsData.js
@@ -2090,10 +2095,11 @@ var INITIAL_PRODUCTS = [
     id: "prod-001",
     name: "Hand-Loomed Kashmiri Pashmina Sozni Shawl",
     slug: "hand-loomed-kashmiri-pashmina-sozni-shawl",
-    shortDescription: "Pure highland wool shawl finished with delicate hand-embroidered Sozni borders.",
-    description: "Woven on traditional wooden looms from fine highland wool, this timeless shawl features intricate needlepoint Sozni floral borders. Featherlight, warm, and delivered in a signature gift box.",
+    shortDescription: "Pure highland wool shawl from Kashmir & Swat finished with delicate hand-embroidered Sozni borders.",
+    description: "Woven on traditional wooden looms from fine highland wool, this timeless shawl features intricate needlepoint Sozni floral borders crafted by master Kashmiri and Swati weavers. Featherlight, warm, and delivered in a signature MIRAS keepsake box.",
     category: "Traditional & Cultural",
     categorySlug: "traditional-cultural",
+    culturalOrigin: "Kashmir & Swat Valley",
     brand: "MIRAS Heritage",
     price: 8500,
     originalPrice: 10500,
@@ -2120,11 +2126,12 @@ var INITIAL_PRODUCTS = [
       materials: ["Pure Pashmina Wool Blend"]
     },
     specifications: {
-      Material: "Highland Wool with Sozni Embroidery",
+      Origin: "Kashmir & Swat Valley",
+      Material: "Highland Wool with Sozni Hand Embroidery",
       Dimensions: "100 cm \xD7 205 cm",
       Care: "Dry clean recommended"
     },
-    tags: ["shawl", "pashmina", "traditional", "winter", "gift"],
+    tags: ["shawl", "pashmina", "kashmir", "swat", "traditional", "winter", "gift"],
     reviews: [
       {
         id: "rev-1",
@@ -2139,12 +2146,13 @@ var INITIAL_PRODUCTS = [
   },
   {
     id: "prod-002",
-    name: "Embroidered Raw Silk Festive Kurta Set",
+    name: "Embroidered Raw Silk Festive Kurta Set (Lahori Tilla)",
     slug: "embroidered-raw-silk-festive-kurta-set",
-    shortDescription: "Two-piece tailored raw silk tunic and trouser set with subtle antique Tilla neckline work.",
-    description: "Designed for both festive gatherings and elevated evening wear. Tailored from breathable medium-weight raw silk with delicate Tilla embroidery along the neckline and sleeves.",
+    shortDescription: "Two-piece tailored raw silk tunic and trouser set with authentic Lahori Dabka & Tilla work.",
+    description: "Designed in our Lahore atelier for festive gatherings and elevated evening wear. Tailored from breathable medium-weight raw silk with intricate antique Tilla embroidery along the neckline and cuffs.",
     category: "Fashion & Apparel",
     categorySlug: "fashion-apparel",
+    culturalOrigin: "Lahore, Punjab",
     brand: "MIRAS Studio",
     price: 6800,
     originalPrice: 7900,
@@ -2167,25 +2175,27 @@ var INITIAL_PRODUCTS = [
         { name: "Olive Green", hex: "#4A5D4E" },
         { name: "Obsidian Black", hex: "#1C1917" }
       ],
-      sizes: ["S", "M", "L", "XL"],
+      sizes: ["XS", "S", "M", "L", "XL"],
       materials: ["Raw Silk"]
     },
     specifications: {
+      Origin: "Lahore, Punjab",
       Includes: "Stitched Embroidered Shirt + Straight Trousers",
       Fabric: "Medium-weight Raw Silk",
       Fit: "Regular Relaxed Fit"
     },
-    tags: ["kurta", "fashion", "silk", "stitched", "festive"],
+    tags: ["kurta", "fashion", "silk", "lahore", "punjab", "stitched", "festive"],
     reviews: []
   },
   {
     id: "prod-003",
-    name: "Full-Grain Leather Weekender & Travel Bag",
+    name: "Peshawari Hand-Stitched Full-Grain Leather Weekender Bag",
     slug: "full-grain-leather-weekender-travel-bag",
-    shortDescription: "Handcrafted genuine leather travel duffle with solid brass hardware and padded shoulder strap.",
-    description: "Built from durable full-grain leather that develops a rich character over time. Features a spacious main compartment, interior zippered pocket, and heavy-duty brass zippers.",
+    shortDescription: "Handcrafted genuine leather travel duffle from Khyber Pakhtunkhwa with solid brass hardware.",
+    description: "Handcrafted by master leather artisans in Peshawar from vegetable-tanned full-grain cowhide that develops a rich patina over time. Features a spacious cabin compartment, interior zippered pocket, and solid brass buckles.",
     category: "Watches, Jewelry & Bags",
     categorySlug: "accessories-watches",
+    culturalOrigin: "Peshawar, Khyber Pakhtunkhwa",
     brand: "MIRAS Leather",
     price: 11500,
     originalPrice: 13500,
@@ -2211,11 +2221,12 @@ var INITIAL_PRODUCTS = [
       materials: ["100% Genuine Leather"]
     },
     specifications: {
+      Origin: "Peshawar, Khyber Pakhtunkhwa",
       Dimensions: "50 cm \xD7 25 cm \xD7 27 cm",
       Material: "100% Genuine Full-Grain Leather",
-      Hardware: "Antique Brass Buckles & Zippers"
+      Hardware: "Solid Antique Brass Buckles & Zippers"
     },
-    tags: ["bag", "leather", "accessories", "travel"],
+    tags: ["bag", "leather", "peshawar", "kpk", "accessories", "travel"],
     reviews: []
   },
   {
@@ -2226,6 +2237,7 @@ var INITIAL_PRODUCTS = [
     description: "Our signature fragrance collection pairs smoky Cambodi Oud, Damascus Rose, and warm Amber Musk. 100% non-alcoholic concentrated perfume oil with 12+ hour projection.",
     category: "Gifts & Fragrances",
     categorySlug: "gifts-lifestyle",
+    culturalOrigin: "Lahore & Abbottabad",
     brand: "MIRAS Scents",
     price: 3800,
     originalPrice: 4500,
@@ -2248,6 +2260,7 @@ var INITIAL_PRODUCTS = [
       materials: ["Pure Concentrated Perfume Oil"]
     },
     specifications: {
+      Origin: "Lahore & Abbottabad",
       Longevity: "12\u201314 Hours",
       Type: "Alcohol-Free Pure Attar & EDP",
       Packaging: "Ready-to-gift Velvet Lined Box"
@@ -2257,12 +2270,13 @@ var INITIAL_PRODUCTS = [
   },
   {
     id: "prod-005",
-    name: "Heritage Kundan & Pearl Jhumka Earrings",
+    name: "Bahawalpuri Heritage Kundan & Pearl Jhumka Earrings",
     slug: "heritage-kundan-pearl-jhumka-earrings",
-    shortDescription: "Gold-plated traditional jhumka earrings handset with Kundan stones and freshwater pearl drops.",
-    description: "Lightweight yet statement-making traditional earrings crafted with high-polish gold plating, uncut glass Kundan stones, and delicate pearl clusters.",
+    shortDescription: "Gold-plated traditional Bahawalpuri jhumka earrings handset with Kundan stones and pearl drops.",
+    description: "Inspired by the royal court jewelry of Bahawalpur and Bikaner, these lightweight statement jhumkas are crafted with high-polish gold plating, uncut Kundan stones, and freshwater pearl clusters.",
     category: "Watches, Jewelry & Bags",
     categorySlug: "accessories-watches",
+    culturalOrigin: "Bahawalpur, South Punjab",
     brand: "MIRAS Jewels",
     price: 2950,
     originalPrice: 3600,
@@ -2288,20 +2302,22 @@ var INITIAL_PRODUCTS = [
       materials: ["Gold-Plated Brass & Pearls"]
     },
     specifications: {
+      Origin: "Bahawalpur, South Punjab",
       Weight: "Lightweight comfortable wear",
       Packaging: "Jewelry keepsake box included"
     },
-    tags: ["jewelry", "earrings", "jhumka", "accessories", "gift"],
+    tags: ["jewelry", "earrings", "jhumka", "bahawalpur", "accessories", "gift"],
     reviews: []
   },
   {
     id: "prod-006",
-    name: "Multani Hand-Painted Ceramic Table Vase",
+    name: "Multani Blue Pottery Hand-Painted Ceramic Table Vase",
     slug: "multani-hand-painted-ceramic-table-vase",
-    shortDescription: "Artisanal kiln-fired ceramic vase painted freehand in traditional cobalt and turquoise glazes.",
-    description: "Handcrafted by master potters in Multan, this ceramic vessel brings timeless regional character to living rooms, dining tables, and office desks.",
+    shortDescription: "Authentic Multani Kashi-gari kiln-fired ceramic vase painted freehand in cobalt and turquoise glazes.",
+    description: "Handcrafted by master Kashi-gari potters in Multan, this ceramic vessel celebrates centuries-old South Punjab glaze artistry and brings timeless regional character to living rooms and dining tables.",
     category: "Home & D\xE9cor",
     categorySlug: "home-decor",
+    culturalOrigin: "Multan, South Punjab",
     brand: "MIRAS Home",
     price: 4200,
     originalPrice: null,
@@ -2310,7 +2326,7 @@ var INITIAL_PRODUCTS = [
     stockStatus: "in_stock",
     rating: 4.9,
     reviewCount: 11,
-    featured: false,
+    featured: true,
     isBestSeller: false,
     isNew: true,
     status: "published",
@@ -2327,10 +2343,137 @@ var INITIAL_PRODUCTS = [
       materials: ["Glazed Ceramic"]
     },
     specifications: {
+      Origin: "Multan, South Punjab",
       Height: "28 cm",
       Packaging: "Double-boxed shatter-proof foam packaging"
     },
-    tags: ["home", "decor", "vase", "multani", "ceramics"],
+    tags: ["home", "decor", "vase", "multan", "punjab", "ceramics"],
+    reviews: []
+  },
+  {
+    id: "prod-007",
+    name: "Authentic Sindhi Block-Printed Natural Indigo Ajrak Shawl",
+    slug: "authentic-sindhi-block-printed-natural-indigo-ajrak-shawl",
+    shortDescription: "16-stage hand block-printed Sindhi Ajrak crafted in Bhitshah & Hala using natural indigo and madder dyes.",
+    description: "An iconic symbol of Indus Valley heritage. Hand-stamped using carved wooden blocks in Bhitshah and Hala, Sindh, through a traditional 16-step natural dyeing process in deep indigo and crimson madder.",
+    category: "Traditional & Cultural",
+    categorySlug: "traditional-cultural",
+    culturalOrigin: "Bhitshah & Hala, Sindh",
+    brand: "MIRAS Heritage",
+    price: 4500,
+    originalPrice: 5400,
+    sku: "MRS-007",
+    stock: 25,
+    stockStatus: "in_stock",
+    rating: 5,
+    reviewCount: 29,
+    featured: true,
+    isBestSeller: true,
+    isNew: true,
+    status: "published",
+    images: [
+      "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=1000&q=85",
+      "https://images.unsplash.com/photo-1606722590583-6951b5ea92ad?auto=format&fit=crop&w=1000&q=85"
+    ],
+    variants: {
+      colors: [
+        { name: "Crimson & Natural Indigo", hex: "#6B2737" },
+        { name: "Deep Indigo & Ivory", hex: "#1E3A8A" }
+      ],
+      sizes: ["Double-Patterned Shawl (2.5 Meters)"],
+      materials: ["100% Organic Cotton"]
+    },
+    specifications: {
+      Origin: "Bhitshah & Hala, Sindh",
+      Technique: "16-Stage HandCarved Wooden Block Print",
+      Fabric: "100% Breathable Organic Cotton",
+      Dimensions: "100 cm \xD7 250 cm"
+    },
+    tags: ["ajrak", "sindh", "sindhi", "shawl", "traditional", "indigo", "block-print"],
+    reviews: []
+  },
+  {
+    id: "prod-008",
+    name: "Balochi Doch Mirror-Work Embroidered Heritage Tunic",
+    slug: "balochi-doch-mirror-work-embroidered-heritage-tunic",
+    shortDescription: "Hand-stitched geometric Balochi Doch embroidery with traditional shisha mirror-work from Quetta & Kalat.",
+    description: "Featuring authentic Balochi Doch needlework painstakingly hand-stitched by female artisans in Quetta and Kalat. Accented with traditional shisha mirror-work on breathable premium cotton-silk fabric.",
+    category: "Fashion & Apparel",
+    categorySlug: "fashion-apparel",
+    culturalOrigin: "Quetta & Kalat, Balochistan",
+    brand: "MIRAS Studio",
+    price: 7400,
+    originalPrice: 8800,
+    sku: "MRS-008",
+    stock: 14,
+    stockStatus: "in_stock",
+    rating: 4.9,
+    reviewCount: 21,
+    featured: true,
+    isBestSeller: true,
+    isNew: true,
+    status: "published",
+    images: [
+      "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1000&q=85",
+      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=85"
+    ],
+    variants: {
+      colors: [
+        { name: "Midnight Black & Ruby Doch", hex: "#1C1917" },
+        { name: "Emerald & Gold Mirror", hex: "#065F46" }
+      ],
+      sizes: ["XS", "S", "M", "L", "XL"],
+      materials: ["Cotton Silk Blend"]
+    },
+    specifications: {
+      Origin: "Quetta & Kalat, Balochistan",
+      Embroidery: "Hand-Stitched Balochi Doch & Shisha Mirror Work",
+      Fabric: "Premium Cotton-Silk Blend",
+      Fit: "Traditional Tailored Silhouette"
+    },
+    tags: ["balochi", "balochistan", "quetta", "embroidery", "kurta", "fashion", "traditional"],
+    reviews: []
+  },
+  {
+    id: "prod-009",
+    name: "Hunza & Chitrali Hand-Spun Pure Woolatti Chugha & Cap Set",
+    slug: "hunza-chitrali-hand-spun-pure-wool-patti-cap-set",
+    shortDescription: "Authentic hand-woven Chitrali & Hunza highland wool Pakol cap and artisanal border wrap from Gilgit-Baltistan.",
+    description: "Woven from 100% pure mountain sheep wool in Chitral and Hunza Valley. Naturally weather-resistant, warm, and finished with traditional Gilgit-Baltistan geometric border motifs.",
+    category: "Traditional & Cultural",
+    categorySlug: "traditional-cultural",
+    culturalOrigin: "Hunza & Chitral, Gilgit-Baltistan",
+    brand: "MIRAS Heritage",
+    price: 5200,
+    originalPrice: 6200,
+    sku: "MRS-009",
+    stock: 16,
+    stockStatus: "in_stock",
+    rating: 4.9,
+    reviewCount: 19,
+    featured: true,
+    isBestSeller: false,
+    isNew: true,
+    status: "published",
+    images: [
+      "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1000&q=85",
+      "https://images.unsplash.com/photo-1606722590583-6951b5ea92ad?auto=format&fit=crop&w=1000&q=85"
+    ],
+    variants: {
+      colors: [
+        { name: "Walnut Earth", hex: "#78350F" },
+        { name: "Alpine Ivory", hex: "#EDE4D7" },
+        { name: "Slate Charcoal", hex: "#374151" }
+      ],
+      sizes: ["Standard Adjustable Fit"],
+      materials: ["100% Hand-Spun Highland Wool"]
+    },
+    specifications: {
+      Origin: "Hunza & Chitral, Gilgit-Baltistan",
+      Material: "100% Hand-Spun Highland Patti Wool",
+      Care: "Gentle cold hand wash or dry clean"
+    },
+    tags: ["hunza", "chitral", "gilgit", "wool", "traditional", "winter", "gift"],
     reviews: []
   }
 ];
@@ -2350,7 +2493,16 @@ var INITIAL_COUPONS = [
     type: "free_shipping",
     value: 0,
     minOrderAmount: 1500,
-    description: "Free Standard Delivery",
+    description: "Free Standard Delivery Nationwide",
+    active: true
+  },
+  {
+    id: "coup-3",
+    code: "HERITAGE15",
+    type: "percentage",
+    value: 15,
+    minOrderAmount: 5e3,
+    description: "15% OFF Regional Heritage Collection above Rs. 5,000",
     active: true
   }
 ];
@@ -2434,7 +2586,6 @@ function validateCouponCode(code, subtotal, coupons = []) {
     message: coupon.description || `Promo code ${coupon.code} applied.`
   };
 }
-__name(validateCouponCode, "validateCouponCode");
 function calculateOrderTotals({
   items = [],
   couponCode = "",
@@ -2504,7 +2655,6 @@ function calculateOrderTotals({
     couponResult
   };
 }
-__name(calculateOrderTotals, "calculateOrderTotals");
 function validateCheckoutPayload(payload = {}) {
   const errors = {};
   const { customer = {}, shippingAddress = {}, paymentMethod = "" } = payload;
@@ -2529,7 +2679,6 @@ function validateCheckoutPayload(payload = {}) {
     errors
   };
 }
-__name(validateCheckoutPayload, "validateCheckoutPayload");
 function verifyCartInventory(cartItems = [], catalogProducts = []) {
   const issues = [];
   for (const item of cartItems) {
@@ -2564,7 +2713,6 @@ function verifyCartInventory(cartItems = [], catalogProducts = []) {
     issues
   };
 }
-__name(verifyCartInventory, "verifyCartInventory");
 
 // worker/index.js
 var app = new Hono3();
@@ -2626,12 +2774,10 @@ async function hashPassword(password, saltHex = null) {
   const saltHexStr = Array.from(salt).map((b) => b.toString(16).padStart(2, "0")).join("");
   return { hashHex, saltHex: saltHexStr };
 }
-__name(hashPassword, "hashPassword");
 async function verifyPassword(password, expectedHashHex, saltHex) {
   const { hashHex } = await hashPassword(password, saltHex);
   return hashHex === expectedHashHex;
 }
-__name(verifyPassword, "verifyPassword");
 async function createToken(payload, secret = "miras-edge-secret-key") {
   const enc = new TextEncoder();
   const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
@@ -2648,49 +2794,125 @@ async function createToken(payload, secret = "miras-edge-secret-key") {
   const signature = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)));
   return `${dataToSign}.${signature}`;
 }
-__name(createToken, "createToken");
+function buildProductRelationStatements(db, product) {
+  const stmts = [
+    db.prepare("DELETE FROM product_images WHERE product_id = ?").bind(product.id),
+    db.prepare("DELETE FROM product_variants WHERE product_id = ?").bind(product.id)
+  ];
+  const images = Array.isArray(product.images) ? product.images : [];
+  images.forEach((url, idx) => {
+    const r2Match = typeof url === "string" && url.startsWith("/api/media/") ? url.replace("/api/media/", "") : null;
+    stmts.push(
+      db.prepare(
+        `INSERT INTO product_images (id, product_id, url, r2_key, alt_text, sort_order)
+           VALUES (?, ?, ?, ?, ?, ?)`
+      ).bind(
+        `pimg-${product.id}-${idx}`,
+        product.id,
+        url,
+        r2Match,
+        `${product.name} \u2014 view ${idx + 1}`,
+        idx
+      )
+    );
+  });
+  const colors = product.variants?.colors || [];
+  colors.forEach((col, idx) => {
+    stmts.push(
+      db.prepare(
+        `INSERT INTO product_variants (id, product_id, variant_type, name, hex_code, stock, sort_order)
+           VALUES (?, ?, 'color', ?, ?, ?, ?)`
+      ).bind(
+        `pvar-col-${product.id}-${idx}`,
+        product.id,
+        col.name || "Standard",
+        col.hex || "#1C1917",
+        Number(product.stock ?? 20),
+        idx
+      )
+    );
+  });
+  const sizes = product.variants?.sizes || [];
+  sizes.forEach((sz, idx) => {
+    stmts.push(
+      db.prepare(
+        `INSERT INTO product_variants (id, product_id, variant_type, name, hex_code, stock, sort_order)
+           VALUES (?, ?, 'size', ?, '', ?, ?)`
+      ).bind(
+        `pvar-sz-${product.id}-${idx}`,
+        product.id,
+        String(sz),
+        Number(product.stock ?? 20),
+        idx
+      )
+    );
+  });
+  const materials = product.variants?.materials || [];
+  materials.forEach((mat, idx) => {
+    stmts.push(
+      db.prepare(
+        `INSERT INTO product_variants (id, product_id, variant_type, name, hex_code, stock, sort_order)
+           VALUES (?, ?, 'material', ?, '', ?, ?)`
+      ).bind(
+        `pvar-mat-${product.id}-${idx}`,
+        product.id,
+        String(mat),
+        Number(product.stock ?? 20),
+        idx
+      )
+    );
+  });
+  return stmts;
+}
 async function seedStarterProductsD1(db) {
-  const stmts = INITIAL_PRODUCTS.map(
-    (p) => db.prepare(
-      `INSERT OR REPLACE INTO products (
-          id, slug, sku, name, short_description, description,
-          category, category_slug, brand, price, original_price,
-          stock, stock_status, status, featured, is_new, is_best_seller,
-          rating, review_count, images_json, variants_json, specifications_json, tags_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).bind(
-      p.id,
-      p.slug,
-      p.sku,
-      p.name,
-      p.shortDescription || "",
-      p.description || "",
-      p.category || "Traditional & Cultural",
-      p.categorySlug || "traditional-cultural",
-      p.brand || "MIRAS",
-      Number(p.price),
-      p.originalPrice ? Number(p.originalPrice) : null,
-      Number(p.stock || 20),
-      p.stockStatus || "in_stock",
-      p.status || "published",
-      p.featured ? 1 : 0,
-      p.isNew ? 1 : 0,
-      p.isBestSeller ? 1 : 0,
-      Number(p.rating || 5),
-      Number(p.reviewCount || 0),
-      JSON.stringify(p.images || []),
-      JSON.stringify(p.variants || { colors: [], sizes: ["Standard"], materials: [] }),
-      JSON.stringify(p.specifications || {}),
-      JSON.stringify(p.tags || [])
-    )
-  );
+  const stmts = [];
+  for (const p of INITIAL_PRODUCTS) {
+    stmts.push(
+      db.prepare(
+        `INSERT OR REPLACE INTO products (
+            id, slug, sku, name, short_description, description,
+            category, category_slug, brand, price, original_price,
+            stock, stock_status, status, featured, is_new, is_best_seller,
+            rating, review_count, images_json, variants_json, specifications_json, tags_json
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        p.id,
+        p.slug,
+        p.sku,
+        p.name,
+        p.shortDescription || "",
+        p.description || "",
+        p.category || "Traditional & Cultural",
+        p.categorySlug || "traditional-cultural",
+        p.brand || "MIRAS",
+        Number(p.price),
+        p.originalPrice ? Number(p.originalPrice) : null,
+        Number(p.stock || 20),
+        p.stockStatus || "in_stock",
+        p.status || "published",
+        p.featured ? 1 : 0,
+        p.isNew ? 1 : 0,
+        p.isBestSeller ? 1 : 0,
+        Number(p.rating || 5),
+        Number(p.reviewCount || 0),
+        JSON.stringify(p.images || []),
+        JSON.stringify(p.variants || { colors: [], sizes: ["Standard"], materials: [] }),
+        JSON.stringify({
+          ...p.specifications || {},
+          Origin: p.culturalOrigin || p.specifications?.Origin || "Pakistan"
+        }),
+        JSON.stringify(p.tags || [])
+      )
+    );
+    stmts.push(...buildProductRelationStatements(db, p));
+  }
   if (stmts.length > 0) await db.batch(stmts);
 }
-__name(seedStarterProductsD1, "seedStarterProductsD1");
 async function ensureD1Seeded(db) {
   try {
-    await db.prepare(
-      `CREATE TABLE IF NOT EXISTS media_assets (
+    await db.batch([
+      db.prepare(
+        `CREATE TABLE IF NOT EXISTS media_assets (
           key TEXT PRIMARY KEY,
           filename TEXT NOT NULL,
           content_type TEXT NOT NULL DEFAULT 'image/jpeg',
@@ -2699,7 +2921,52 @@ async function ensureD1Seeded(db) {
           base64_data TEXT DEFAULT NULL,
           created_at TEXT NOT NULL DEFAULT (datetime('now'))
         )`
-    ).run();
+      ),
+      db.prepare(
+        `CREATE TABLE IF NOT EXISTS product_images (
+          id TEXT PRIMARY KEY,
+          product_id TEXT NOT NULL,
+          url TEXT NOT NULL,
+          r2_key TEXT DEFAULT NULL,
+          alt_text TEXT DEFAULT '',
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+        )`
+      ),
+      db.prepare(
+        `CREATE TABLE IF NOT EXISTS product_variants (
+          id TEXT PRIMARY KEY,
+          product_id TEXT NOT NULL,
+          variant_type TEXT NOT NULL,
+          name TEXT NOT NULL,
+          hex_code TEXT DEFAULT '',
+          sku_suffix TEXT DEFAULT '',
+          stock INTEGER NOT NULL DEFAULT 20,
+          price_delta INTEGER NOT NULL DEFAULT 0,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+        )`
+      ),
+      db.prepare(
+        `CREATE TABLE IF NOT EXISTS user_addresses (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          label TEXT NOT NULL DEFAULT 'Home Residence',
+          recipient_name TEXT DEFAULT '',
+          phone TEXT DEFAULT '',
+          address_line1 TEXT NOT NULL,
+          address_line2 TEXT DEFAULT '',
+          city TEXT NOT NULL,
+          state TEXT DEFAULT 'Punjab',
+          postal_code TEXT DEFAULT '',
+          country TEXT NOT NULL DEFAULT 'Pakistan',
+          is_default INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )`
+      )
+    ]);
     const setting = await db.prepare("SELECT id FROM store_settings WHERE id = 1").first();
     const isFirstTimeInit = !setting;
     if (isFirstTimeInit) {
@@ -2760,12 +3027,13 @@ async function ensureD1Seeded(db) {
     console.error("D1 Seeding error (non-fatal):", err);
   }
 }
-__name(ensureD1Seeded, "ensureD1Seeded");
 function mapProductRow(r, reviewsByProductId = {}) {
   if (!r) return null;
   const price = Number(r.price);
   const originalPrice = r.original_price ? Number(r.original_price) : null;
   const prodReviews = reviewsByProductId[r.id] || [];
+  const specifications = typeof r.specifications_json === "string" ? JSON.parse(r.specifications_json) : r.specifications || {};
+  const culturalOrigin = r.cultural_origin || r.culturalOrigin || specifications?.Origin || specifications?.Region || "";
   return {
     id: r.id,
     slug: r.slug,
@@ -2776,6 +3044,8 @@ function mapProductRow(r, reviewsByProductId = {}) {
     category: r.category,
     categoryName: r.category,
     categorySlug: r.category_slug,
+    culturalOrigin,
+    origin: culturalOrigin,
     brand: r.brand,
     price,
     originalPrice,
@@ -2792,13 +3062,12 @@ function mapProductRow(r, reviewsByProductId = {}) {
     reviews: prodReviews,
     images: typeof r.images_json === "string" ? JSON.parse(r.images_json) : r.images || [],
     variants: typeof r.variants_json === "string" ? JSON.parse(r.variants_json) : r.variants || { colors: [], sizes: ["Standard"], materials: [] },
-    specifications: typeof r.specifications_json === "string" ? JSON.parse(r.specifications_json) : r.specifications || {},
+    specifications,
     tags: typeof r.tags_json === "string" ? JSON.parse(r.tags_json) : r.tags || [],
     createdAt: r.created_at,
     updatedAt: r.updated_at
   };
 }
-__name(mapProductRow, "mapProductRow");
 function mapOrderRow(o, itemsByOrderId = {}) {
   if (!o) return null;
   const subtotal = Number(o.subtotal || 0);
@@ -2841,7 +3110,6 @@ function mapOrderRow(o, itemsByOrderId = {}) {
     items: itemsByOrderId[o.id] || []
   };
 }
-__name(mapOrderRow, "mapOrderRow");
 app.get("/api/health", async (c) => {
   const isD1 = Boolean(c.env?.DB);
   const isR2 = Boolean(c.env?.MEDIA_BUCKET);
@@ -2886,7 +3154,6 @@ function arrayBufferToBase64(buffer) {
   }
   return btoa(binary);
 }
-__name(arrayBufferToBase64, "arrayBufferToBase64");
 function base64ToUint8Array(base64) {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
@@ -2895,7 +3162,6 @@ function base64ToUint8Array(base64) {
   }
   return bytes;
 }
-__name(base64ToUint8Array, "base64ToUint8Array");
 app.post("/api/media/upload", async (c) => {
   try {
     const contentTypeHeader = c.req.header("content-type") || "";
@@ -3197,9 +3463,10 @@ app.delete("/api/categories/:id", async (c) => {
   return c.json({ deleted: true });
 });
 async function loadD1ProductsWithReviews(db) {
-  const [prodRows, revRows] = await Promise.all([
+  const [prodRows, revRows, imgRows] = await Promise.all([
     db.prepare("SELECT * FROM products WHERE status = 'published' ORDER BY featured DESC, created_at DESC").all(),
-    db.prepare("SELECT * FROM product_reviews ORDER BY created_at DESC").all()
+    db.prepare("SELECT * FROM product_reviews ORDER BY created_at DESC").all(),
+    db.prepare("SELECT * FROM product_images ORDER BY sort_order ASC").all().catch(() => ({ results: [] }))
   ]);
   const reviewsByProductId = {};
   for (const rev of revRows?.results || []) {
@@ -3217,9 +3484,21 @@ async function loadD1ProductsWithReviews(db) {
       verified: Boolean(rev.verified_purchase)
     });
   }
-  return (prodRows?.results || []).map((r) => mapProductRow(r, reviewsByProductId));
+  const imagesByProductId = {};
+  for (const img of imgRows?.results || []) {
+    if (!imagesByProductId[img.product_id]) {
+      imagesByProductId[img.product_id] = [];
+    }
+    imagesByProductId[img.product_id].push(img.url);
+  }
+  return (prodRows?.results || []).map((r) => {
+    const mapped = mapProductRow(r, reviewsByProductId);
+    if (imagesByProductId[r.id]?.length > 0 && (!mapped.images || mapped.images.length === 0)) {
+      mapped.images = imagesByProductId[r.id];
+    }
+    return mapped;
+  });
 }
-__name(loadD1ProductsWithReviews, "loadD1ProductsWithReviews");
 app.get("/api/products", async (c) => {
   if (c.env?.DB) {
     try {
@@ -3242,6 +3521,11 @@ app.post("/api/products", async (c) => {
   const id = body.id || `prod-${Date.now()}`;
   const slug = `${baseSlug}-${id.slice(-4)}`;
   const originalPrice = body.originalPrice !== void 0 && body.originalPrice !== null && body.originalPrice !== "" ? Number(body.originalPrice) : body.compareAtPrice ? Number(body.compareAtPrice) : null;
+  const culturalOrigin = (body.culturalOrigin || body.origin || body.specifications?.Origin || "Pakistan").trim();
+  const mergedSpecs = {
+    ...body.specifications || {},
+    Origin: culturalOrigin
+  };
   const newProduct = {
     id,
     slug: body.slug || slug,
@@ -3252,6 +3536,8 @@ app.post("/api/products", async (c) => {
     category: body.category || "Traditional & Cultural",
     categoryName: body.category || "Traditional & Cultural",
     categorySlug: body.categorySlug || "traditional-cultural",
+    culturalOrigin,
+    origin: culturalOrigin,
     brand: body.brand || "MIRAS",
     price: Number(body.price),
     originalPrice,
@@ -3268,45 +3554,49 @@ app.post("/api/products", async (c) => {
     reviews: [],
     images: Array.isArray(body.images) && body.images.length > 0 ? body.images : [],
     variants: body.variants || { colors: [], sizes: ["Standard"], materials: [] },
-    specifications: body.specifications || {},
+    specifications: mergedSpecs,
     tags: body.tags || []
   };
   if (c.env?.DB) {
     try {
       await ensureD1Seeded(c.env.DB);
-      await c.env.DB.prepare(
-        `INSERT OR REPLACE INTO products (
-          id, slug, sku, name, short_description, description,
-          category, category_slug, brand, price, original_price,
-          stock, stock_status, status, featured, is_new, is_best_seller,
-          rating, review_count, images_json, variants_json, specifications_json, tags_json,
-          updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
-      ).bind(
-        newProduct.id,
-        newProduct.slug,
-        newProduct.sku,
-        newProduct.name,
-        newProduct.shortDescription,
-        newProduct.description,
-        newProduct.category,
-        newProduct.categorySlug,
-        newProduct.brand,
-        newProduct.price,
-        newProduct.originalPrice,
-        newProduct.stock,
-        newProduct.stockStatus,
-        newProduct.status,
-        newProduct.featured ? 1 : 0,
-        newProduct.isNew ? 1 : 0,
-        newProduct.isBestSeller ? 1 : 0,
-        newProduct.rating,
-        newProduct.reviewCount,
-        JSON.stringify(newProduct.images),
-        JSON.stringify(newProduct.variants),
-        JSON.stringify(newProduct.specifications),
-        JSON.stringify(newProduct.tags)
-      ).run();
+      const stmts = [
+        c.env.DB.prepare(
+          `INSERT OR REPLACE INTO products (
+            id, slug, sku, name, short_description, description,
+            category, category_slug, brand, price, original_price,
+            stock, stock_status, status, featured, is_new, is_best_seller,
+            rating, review_count, images_json, variants_json, specifications_json, tags_json,
+            updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+        ).bind(
+          newProduct.id,
+          newProduct.slug,
+          newProduct.sku,
+          newProduct.name,
+          newProduct.shortDescription,
+          newProduct.description,
+          newProduct.category,
+          newProduct.categorySlug,
+          newProduct.brand,
+          newProduct.price,
+          newProduct.originalPrice,
+          newProduct.stock,
+          newProduct.stockStatus,
+          newProduct.status,
+          newProduct.featured ? 1 : 0,
+          newProduct.isNew ? 1 : 0,
+          newProduct.isBestSeller ? 1 : 0,
+          newProduct.rating,
+          newProduct.reviewCount,
+          JSON.stringify(newProduct.images),
+          JSON.stringify(newProduct.variants),
+          JSON.stringify(newProduct.specifications),
+          JSON.stringify(newProduct.tags)
+        ),
+        ...buildProductRelationStatements(c.env.DB, newProduct)
+      ];
+      await c.env.DB.batch(stmts);
     } catch (e) {
       console.error("Failed writing product to D1:", e);
       return c.json({ error: `Database error saving product: ${e.message}` }, 500);
@@ -3332,33 +3622,47 @@ app.put("/api/products/:id", async (c) => {
       const stockStatus = updatedStock === 0 ? "out_of_stock" : updatedStock <= 5 ? "low_stock" : "in_stock";
       const originalPrice = body.originalPrice !== void 0 ? body.originalPrice ? Number(body.originalPrice) : null : body.compareAtPrice !== void 0 ? body.compareAtPrice ? Number(body.compareAtPrice) : null : currentMapped.originalPrice;
       const featuredFlag = body.featured !== void 0 ? Boolean(body.featured) : body.isFeatured !== void 0 ? Boolean(body.isFeatured) : currentMapped.featured;
-      await c.env.DB.prepare(
-        `UPDATE products SET
-          sku = ?, name = ?, price = ?, original_price = ?, stock = ?, stock_status = ?,
-          short_description = ?, description = ?, category = ?, category_slug = ?,
-          featured = ?, is_new = ?, is_best_seller = ?, images_json = ?, variants_json = ?,
-          specifications_json = ?, tags_json = ?, updated_at = datetime('now')
-         WHERE id = ?`
-      ).bind(
-        merged.sku || existing.sku,
-        merged.name,
-        Number(merged.price),
-        originalPrice,
-        updatedStock,
-        stockStatus,
-        merged.shortDescription || "",
-        merged.description || "",
-        merged.category || existing.category,
-        merged.categorySlug || existing.category_slug,
-        featuredFlag ? 1 : 0,
-        merged.isNew ? 1 : 0,
-        merged.isBestSeller ? 1 : 0,
-        JSON.stringify(merged.images || []),
-        JSON.stringify(merged.variants || {}),
-        JSON.stringify(merged.specifications || {}),
-        JSON.stringify(merged.tags || []),
-        id
-      ).run();
+      const nextOrigin = (body.culturalOrigin || body.origin || body.specifications?.Origin || currentMapped.culturalOrigin || "Pakistan").trim();
+      const nextSpecs = {
+        ...currentMapped.specifications || {},
+        ...body.specifications || {},
+        Origin: nextOrigin
+      };
+      const stmts = [
+        c.env.DB.prepare(
+          `UPDATE products SET
+            sku = ?, name = ?, price = ?, original_price = ?, stock = ?, stock_status = ?,
+            short_description = ?, description = ?, category = ?, category_slug = ?,
+            featured = ?, is_new = ?, is_best_seller = ?, images_json = ?, variants_json = ?,
+            specifications_json = ?, tags_json = ?, updated_at = datetime('now')
+           WHERE id = ?`
+        ).bind(
+          merged.sku || existing.sku,
+          merged.name,
+          Number(merged.price),
+          originalPrice,
+          updatedStock,
+          stockStatus,
+          merged.shortDescription || "",
+          merged.description || "",
+          merged.category || existing.category,
+          merged.categorySlug || existing.category_slug,
+          featuredFlag ? 1 : 0,
+          merged.isNew ? 1 : 0,
+          merged.isBestSeller ? 1 : 0,
+          JSON.stringify(merged.images || []),
+          JSON.stringify(merged.variants || {}),
+          JSON.stringify(nextSpecs),
+          JSON.stringify(merged.tags || []),
+          id
+        ),
+        ...buildProductRelationStatements(c.env.DB, {
+          ...merged,
+          id,
+          stock: updatedStock
+        })
+      ];
+      await c.env.DB.batch(stmts);
       const freshRow = await c.env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(id).first();
       const updatedProduct = mapProductRow(freshRow);
       edgeProducts = edgeProducts.map((p) => p.id === id ? updatedProduct : p);
@@ -3385,8 +3689,23 @@ app.delete("/api/products/:id", async (c) => {
   const id = c.req.param("id");
   if (c.env?.DB) {
     try {
-      await c.env.DB.prepare("DELETE FROM product_reviews WHERE product_id = ?").bind(id).run();
-      await c.env.DB.prepare("DELETE FROM products WHERE id = ?").bind(id).run();
+      const imgRows = await c.env.DB.prepare(
+        "SELECT r2_key FROM product_images WHERE product_id = ? AND r2_key IS NOT NULL"
+      ).bind(id).all().catch(() => ({ results: [] }));
+      if (c.env?.MEDIA_BUCKET && imgRows?.results?.length > 0) {
+        for (const row of imgRows.results) {
+          if (row.r2_key) {
+            await c.env.MEDIA_BUCKET.delete(row.r2_key).catch(() => {
+            });
+          }
+        }
+      }
+      await c.env.DB.batch([
+        c.env.DB.prepare("DELETE FROM product_images WHERE product_id = ?").bind(id),
+        c.env.DB.prepare("DELETE FROM product_variants WHERE product_id = ?").bind(id),
+        c.env.DB.prepare("DELETE FROM product_reviews WHERE product_id = ?").bind(id),
+        c.env.DB.prepare("DELETE FROM products WHERE id = ?").bind(id)
+      ]);
     } catch (e) {
       console.error("Failed deleting product from D1:", e);
     }
@@ -3397,8 +3716,12 @@ app.delete("/api/products/:id", async (c) => {
 app.delete("/api/products", async (c) => {
   if (c.env?.DB) {
     try {
-      await c.env.DB.prepare("DELETE FROM product_reviews").run();
-      await c.env.DB.prepare("DELETE FROM products").run();
+      await c.env.DB.batch([
+        c.env.DB.prepare("DELETE FROM product_images"),
+        c.env.DB.prepare("DELETE FROM product_variants"),
+        c.env.DB.prepare("DELETE FROM product_reviews"),
+        c.env.DB.prepare("DELETE FROM products")
+      ]);
     } catch (e) {
       console.error("Failed clearing products in D1:", e);
     }
@@ -3470,6 +3793,35 @@ app.post("/api/products/:id/reviews", async (c) => {
     };
   });
   return c.json({ review: newReview }, 201);
+});
+app.delete("/api/products/:id/reviews/:reviewId", async (c) => {
+  const id = c.req.param("id");
+  const reviewId = c.req.param("reviewId");
+  if (c.env?.DB) {
+    try {
+      await c.env.DB.prepare("DELETE FROM product_reviews WHERE id = ? AND product_id = ?").bind(reviewId, id).run();
+      const stats = await c.env.DB.prepare(
+        "SELECT AVG(rating) as avg_rating, COUNT(*) as count FROM product_reviews WHERE product_id = ?"
+      ).bind(id).first();
+      const nextCount = Number(stats?.count || 0);
+      const nextRating = nextCount > 0 ? Number(Number(stats.avg_rating).toFixed(1)) : 5;
+      await c.env.DB.prepare("UPDATE products SET rating = ?, review_count = ? WHERE id = ?").bind(nextRating, nextCount, id).run();
+    } catch (e) {
+      console.error("Failed deleting review in D1:", e);
+    }
+  }
+  edgeProducts = edgeProducts.map((p) => {
+    if (p.id !== id) return p;
+    const reviews = (p.reviews || []).filter((r) => r.id !== reviewId);
+    const avg = reviews.length > 0 ? reviews.reduce((s, r) => s + Number(r.rating), 0) / reviews.length : 5;
+    return {
+      ...p,
+      reviews,
+      reviewCount: reviews.length,
+      rating: Number(avg.toFixed(1))
+    };
+  });
+  return c.json({ deleted: true });
 });
 app.post("/api/auth/login", async (c) => {
   const { email, password } = await c.req.json();
@@ -3591,6 +3943,241 @@ app.put("/api/auth/password", async (c) => {
   }
   return c.json({ success: true, message: "Password updated." });
 });
+app.post("/api/auth/google", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  let googleProfile = null;
+  if (body.accessToken || body.access_token) {
+    const accessToken = body.accessToken || body.access_token;
+    try {
+      const userRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        if (userData?.email) {
+          googleProfile = {
+            googleId: userData.sub || `goog-${Date.now()}`,
+            email: userData.email.trim().toLowerCase(),
+            firstName: userData.given_name || userData.name?.split(" ")[0] || "Google",
+            lastName: userData.family_name || userData.name?.split(" ").slice(1).join(" ") || "",
+            picture: userData.picture || "",
+            emailVerified: Boolean(userData.email_verified ?? true)
+          };
+        }
+      }
+    } catch (e) {
+      console.error("Google userinfo verification error:", e);
+    }
+  }
+  if (!googleProfile && body.credential) {
+    try {
+      const verifyRes = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(body.credential)}`
+      );
+      if (verifyRes.ok) {
+        const tokenData = await verifyRes.json();
+        if (tokenData?.email) {
+          googleProfile = {
+            googleId: tokenData.sub || `goog-${Date.now()}`,
+            email: tokenData.email.trim().toLowerCase(),
+            firstName: tokenData.given_name || tokenData.name?.split(" ")[0] || "Google",
+            lastName: tokenData.family_name || tokenData.name?.split(" ").slice(1).join(" ") || "User",
+            picture: tokenData.picture || "",
+            emailVerified: tokenData.email_verified === "true" || tokenData.email_verified === true
+          };
+        }
+      }
+    } catch (e) {
+      console.error("Google tokeninfo verification error:", e);
+    }
+    if (!googleProfile && typeof body.credential === "string" && body.credential.split(".").length === 3) {
+      try {
+        const payloadB64 = body.credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+        const decoded = JSON.parse(atob(payloadB64));
+        if (decoded?.email) {
+          googleProfile = {
+            googleId: decoded.sub || `goog-${Date.now()}`,
+            email: decoded.email.trim().toLowerCase(),
+            firstName: decoded.given_name || decoded.name?.split(" ")[0] || "Google",
+            lastName: decoded.family_name || decoded.name?.split(" ").slice(1).join(" ") || "User",
+            picture: decoded.picture || "",
+            emailVerified: true
+          };
+        }
+      } catch {
+      }
+    }
+  }
+  if (!googleProfile && body.email) {
+    googleProfile = {
+      googleId: body.googleId || body.sub || `goog-${Date.now()}`,
+      email: body.email.trim().toLowerCase(),
+      firstName: (body.firstName || body.given_name || body.name?.split(" ")[0] || "Customer").trim(),
+      lastName: (body.lastName || body.family_name || body.name?.split(" ").slice(1).join(" ") || "").trim(),
+      picture: body.picture || "",
+      emailVerified: true
+    };
+  }
+  if (!googleProfile || !googleProfile.email || !googleProfile.email.includes("@")) {
+    return c.json({ error: "Valid Google account email is required for Google Sign-In." }, 400);
+  }
+  const isAdminEmail = googleProfile.email === "admin@miras.store" || googleProfile.email === "admin@mirasstore.com";
+  let user = {
+    id: `usr-goog-${Date.now().toString().slice(-6)}`,
+    firstName: googleProfile.firstName,
+    lastName: googleProfile.lastName,
+    email: googleProfile.email,
+    phone: body.phone || "",
+    role: isAdminEmail ? "admin" : "customer",
+    authProvider: "google",
+    emailVerified: true,
+    picture: googleProfile.picture || "",
+    savedAddresses: []
+  };
+  if (c.env?.DB) {
+    try {
+      await ensureD1Seeded(c.env.DB);
+      const existing = await c.env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(googleProfile.email).first();
+      if (existing) {
+        user = {
+          id: existing.id,
+          firstName: existing.first_name || googleProfile.firstName,
+          lastName: existing.last_name || googleProfile.lastName,
+          email: existing.email,
+          phone: existing.phone || "",
+          role: existing.role || (isAdminEmail ? "admin" : "customer"),
+          authProvider: "google",
+          emailVerified: true,
+          picture: googleProfile.picture || existing.avatar_url || "",
+          savedAddresses: JSON.parse(existing.addresses_json || "[]")
+        };
+      } else {
+        const { hashHex, saltHex } = await hashPassword(`google-oauth-${googleProfile.googleId}-${Date.now()}`);
+        await c.env.DB.prepare(
+          `INSERT INTO users (id, first_name, last_name, email, phone, password_hash, password_salt, role, addresses_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, '[]')`
+        ).bind(
+          user.id,
+          user.firstName,
+          user.lastName,
+          user.email,
+          user.phone,
+          hashHex,
+          saltHex,
+          user.role
+        ).run();
+      }
+    } catch (e) {
+      console.error("D1 Google Sign-In upsert error:", e);
+    }
+  } else {
+    const existingEdge = edgeUsers.find((u) => u.email === googleProfile.email);
+    if (existingEdge) {
+      user = { ...existingEdge, authProvider: "google", emailVerified: true, picture: googleProfile.picture || existingEdge.picture || "" };
+    } else {
+      edgeUsers.push(user);
+    }
+  }
+  const token = await createToken(
+    { userId: user.id, email: user.email, role: user.role, provider: "google" },
+    c.env?.JWT_SECRET || "miras-prod-jwt-secret-key-2026-secure"
+  );
+  return c.json({ user, token, provider: "google" });
+});
+app.put("/api/auth/profile", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const email = (body.email || "").trim().toLowerCase();
+  if (!email) {
+    return c.json({ error: "User email is required to update profile." }, 400);
+  }
+  const firstName = (body.firstName || "Customer").trim();
+  const lastName = (body.lastName || "").trim();
+  const phone = (body.phone || "").trim();
+  const savedAddresses = Array.isArray(body.savedAddresses) ? body.savedAddresses : [];
+  const wishlist = Array.isArray(body.wishlist) ? body.wishlist : void 0;
+  if (c.env?.DB) {
+    try {
+      await ensureD1Seeded(c.env.DB);
+      await c.env.DB.prepare(
+        `UPDATE users SET
+          first_name = ?,
+          last_name = ?,
+          phone = ?,
+          addresses_json = ?,
+          wishlist_json = COALESCE(?, wishlist_json),
+          updated_at = datetime('now')
+         WHERE email = ?`
+      ).bind(
+        firstName,
+        lastName,
+        phone,
+        JSON.stringify(savedAddresses),
+        wishlist ? JSON.stringify(wishlist) : null,
+        email
+      ).run();
+      const updatedRow = await c.env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(email).first();
+      if (updatedRow) {
+        const addrStmts = [
+          c.env.DB.prepare("DELETE FROM user_addresses WHERE user_id = ?").bind(updatedRow.id)
+        ];
+        savedAddresses.forEach((addr, idx) => {
+          if (addr && (addr.addressLine1 || addr.city)) {
+            addrStmts.push(
+              c.env.DB.prepare(
+                `INSERT INTO user_addresses (
+                  id, user_id, label, recipient_name, phone,
+                  address_line1, address_line2, city, state, postal_code, country, is_default
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+              ).bind(
+                addr.id || `addr-${updatedRow.id}-${idx + 1}`,
+                updatedRow.id,
+                addr.label || "Home Residence",
+                `${firstName} ${lastName}`.trim(),
+                addr.phone || phone || "",
+                addr.addressLine1 || "",
+                addr.addressLine2 || "",
+                addr.city || "Lahore",
+                addr.state || "Punjab",
+                addr.postalCode || "",
+                addr.country || "Pakistan",
+                addr.isDefault || idx === 0 ? 1 : 0
+              )
+            );
+          }
+        });
+        await c.env.DB.batch(addrStmts).catch(() => {
+        });
+        return c.json({
+          user: {
+            id: updatedRow.id,
+            firstName: updatedRow.first_name,
+            lastName: updatedRow.last_name,
+            email: updatedRow.email,
+            phone: updatedRow.phone,
+            role: updatedRow.role,
+            savedAddresses: JSON.parse(updatedRow.addresses_json || "[]")
+          }
+        });
+      }
+    } catch (e) {
+      console.error("D1 profile update error:", e);
+    }
+  }
+  edgeUsers = edgeUsers.map(
+    (u) => u.email === email ? { ...u, firstName, lastName, phone, savedAddresses } : u
+  );
+  return c.json({
+    user: edgeUsers.find((u) => u.email === email) || {
+      id: body.id || "usr-local",
+      firstName,
+      lastName,
+      email,
+      phone,
+      role: body.role || "customer",
+      savedAddresses
+    }
+  });
+});
 async function loadD1OrdersWithItems(db) {
   const [orderRows, itemRows] = await Promise.all([
     db.prepare("SELECT * FROM orders ORDER BY created_at DESC LIMIT 200").all(),
@@ -3616,7 +4203,6 @@ async function loadD1OrdersWithItems(db) {
   }
   return (orderRows?.results || []).map((o) => mapOrderRow(o, itemsByOrderId));
 }
-__name(loadD1OrdersWithItems, "loadD1OrdersWithItems");
 app.get("/api/orders", async (c) => {
   if (c.env?.DB) {
     try {
@@ -4037,4 +4623,3 @@ var index_default = app;
 export {
   index_default as default
 };
-//# sourceMappingURL=index.js.map

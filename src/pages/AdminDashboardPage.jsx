@@ -25,9 +25,11 @@ import {
   Truck,
   X,
   Database,
+  Star,
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import SEOHead from '../components/common/SEOHead';
+import GoogleSignInButton from '../components/common/GoogleSignInButton';
 
 const COLOR_MAP = {
   black: '#1C1A17',
@@ -78,7 +80,6 @@ export default function AdminDashboardPage() {
   const {
     user,
     login,
-    loginWithGoogle,
     products,
     categories,
     orders,
@@ -98,6 +99,7 @@ export default function AdminDashboardPage() {
     createCouponAdmin,
     deleteCouponAdmin,
     updateSettingsAdmin,
+    deleteProductReviewAdmin,
     addToast,
   } = useStore();
 
@@ -170,9 +172,20 @@ export default function AdminDashboardPage() {
     contactPhone: settings.contactPhone || '',
     contactEmail: settings.contactEmail || '',
     freeShippingThreshold: String(settings.currency?.freeShippingThreshold || 5000),
+    standardShippingFee: String(settings.shipping?.methods?.[0]?.price ?? 250),
+    expressShippingFee: String(settings.shipping?.methods?.[1]?.price ?? 500),
     heroHeading: settings.heroBanner?.heading || 'Discover Products With Character.',
     heroSubheading: settings.heroBanner?.subheading || '',
     heroImage: settings.heroBanner?.image || '',
+    lookbookHeading:
+      settings.lookbookBanner?.heading ||
+      'Timeless Eastern Craft & Contemporary Silhouettes',
+    lookbookDescription:
+      settings.lookbookBanner?.description ||
+      'From hand-loomed Kashmiri & Swati shawls to tailored seasonal apparel and artisan brassware — crafted for everyday elegance and festive occasions.',
+    lookbookImage:
+      settings.lookbookBanner?.image ||
+      'https://images.unsplash.com/photo-1606722590583-6951b5ea92ad?auto=format&fit=crop&w=1400&q=85',
     walletNumber: settings.paymentProviders?.[1]?.bankDetails?.accountNumber || '0300-1234567',
     bankName:
       settings.paymentProviders?.[1]?.bankDetails?.bankName ||
@@ -209,26 +222,10 @@ export default function AdminDashboardPage() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={async () => {
-              await loginWithGoogle({
-                firstName: 'Store',
-                lastName: 'Admin',
-                email: 'admin@miras.store',
-                googleId: 'goog-admin-01',
-              });
-            }}
+          <GoogleSignInButton
+            label="Sign in with Google (Store Owner)"
             className="w-full py-3 px-4 rounded-xl bg-white hover:bg-stone-50 text-[#1C1A17] border border-[#E6DFD3] hover:border-[#1C1A17] text-xs font-semibold flex items-center justify-center gap-2.5 transition-all cursor-pointer"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z" />
-              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z" />
-              <path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z" />
-              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z" />
-            </svg>
-            <span>Sign in with Google (Store Owner)</span>
-          </button>
+          />
 
           <form onSubmit={handleAdminLogin} className="space-y-4">
             <div>
@@ -660,6 +657,11 @@ export default function AdminDashboardPage() {
             id: 'marketing',
             label: `Marketing & Promo Codes (${coupons.length})`,
             icon: Tag,
+          },
+          {
+            id: 'reviews',
+            label: `Customer Reviews (${products.reduce((s, p) => s + (p.reviews?.length || 0), 0)})`,
+            icon: Star,
           },
           { id: 'settings', label: 'Store & Brand Settings', icon: Settings },
         ].map((tab) => {
@@ -1721,12 +1723,86 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
+      {/* TAB 4.5: CUSTOMER REVIEWS MODERATION */}
+      {activeTab === 'reviews' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-[#E6DFD3] p-6">
+            <h2 className="font-serif text-2xl font-semibold text-[#1C1A17]">
+              Customer Reviews Moderation
+            </h2>
+            <p className="text-xs text-[#5C564F] mt-1">
+              Inspect verified customer reviews stored in Cloudflare D1 (<code className="font-mono">product_reviews</code> table) and remove inappropriate or spam entries.
+            </p>
+          </div>
+
+          {products.every((p) => !p.reviews || p.reviews.length === 0) ? (
+            <div className="bg-white rounded-2xl border border-[#E6DFD3] p-12 text-center">
+              <Star className="w-8 h-8 text-[#C59B5F] mx-auto mb-2" />
+              <p className="text-sm font-semibold text-[#1C1A17]">No customer reviews submitted yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {products.flatMap((prod) =>
+                (prod.reviews || []).map((rev) => (
+                  <div
+                    key={`${prod.id}-${rev.id}`}
+                    className="bg-white rounded-2xl border border-[#E6DFD3] p-5 flex flex-col justify-between gap-4"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <Link
+                            to={`/product/${prod.slug}`}
+                            className="text-xs font-semibold text-[#9E4733] hover:underline"
+                          >
+                            {prod.name}
+                          </Link>
+                          <p className="text-sm font-semibold text-[#1C1A17] mt-0.5">
+                            {rev.title || 'Customer Review'}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => deleteProductReviewAdmin(prod.id, rev.id)}
+                          className="p-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 cursor-pointer shrink-0"
+                          title="Delete Review"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1 text-amber-500 text-xs">
+                        {Array.from({ length: 5 }).map((_, idx) => (
+                          <Star
+                            key={idx}
+                            className={`w-3.5 h-3.5 ${
+                              idx < Number(rev.rating || 5) ? 'fill-amber-400 text-amber-400' : 'text-stone-300'
+                            }`}
+                          />
+                        ))}
+                        <span className="text-[11px] text-[#5C564F] ml-1.5">
+                          by <strong>{rev.author}</strong> ({rev.location || 'Pakistan'}) · {rev.date}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#5C564F] leading-relaxed">{rev.comment}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* TAB 5: STORE SETTINGS & SECURITY */}
       {activeTab === 'settings' && (
         <div className="max-w-3xl space-y-8">
           <form
             onSubmit={async (e) => {
               e.preventDefault();
+              const freeThreshold = Number(settingsForm.freeShippingThreshold || 5000);
+              const standardFee = Number(settingsForm.standardShippingFee ?? 250);
+              const expressFee = Number(settingsForm.expressShippingFee ?? 500);
+
               await updateSettingsAdmin({
                 brandName: settingsForm.brandName,
                 brandTagline: settingsForm.brandTagline,
@@ -1740,6 +1816,12 @@ export default function AdminDashboardPage() {
                   heading: settingsForm.heroHeading,
                   subheading: settingsForm.heroSubheading,
                   image: settingsForm.heroImage || settings.heroBanner?.image,
+                },
+                lookbookBanner: {
+                  ...(settings.lookbookBanner || {}),
+                  heading: settingsForm.lookbookHeading,
+                  description: settingsForm.lookbookDescription,
+                  image: settingsForm.lookbookImage,
                 },
                 announcement: {
                   enabled: true,
@@ -1774,11 +1856,31 @@ export default function AdminDashboardPage() {
                 ],
                 currency: {
                   ...settings.currency,
-                  freeShippingThreshold: Number(settingsForm.freeShippingThreshold || 5000),
+                  freeShippingThreshold: freeThreshold,
                 },
                 shipping: {
                   ...settings.shipping,
-                  freeShippingThreshold: Number(settingsForm.freeShippingThreshold || 5000),
+                  freeShippingThreshold: freeThreshold,
+                  methods: [
+                    {
+                      ...(settings.shipping?.methods?.[0] || {
+                        id: 'standard',
+                        name: 'Standard Tracked Courier (TCS / Leopards)',
+                        eta: '2–4 Working Days',
+                        freeAboveThreshold: true,
+                      }),
+                      price: standardFee,
+                    },
+                    {
+                      ...(settings.shipping?.methods?.[1] || {
+                        id: 'express',
+                        name: 'Priority Express Delivery',
+                        eta: 'Next-Day / 48 Hours',
+                        freeAboveThreshold: false,
+                      }),
+                      price: expressFee,
+                    },
+                  ],
                 },
                 googleClientId: (settingsForm.googleClientId || '').trim(),
               });
@@ -1786,7 +1888,7 @@ export default function AdminDashboardPage() {
             className="bg-white rounded-2xl border border-[#E6DFD3] p-6 sm:p-8 space-y-6"
           >
             <h3 className="font-serif text-2xl font-semibold text-[#1C1A17]">
-              Store Branding & Contact Settings
+              Store Branding, Shipping & Homepage Settings
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1877,6 +1979,32 @@ export default function AdminDashboardPage() {
                   className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
                 />
               </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                  Standard Courier Rate (PKR)
+                </label>
+                <input
+                  type="number"
+                  value={settingsForm.standardShippingFee}
+                  onChange={(e) =>
+                    setSettingsForm({ ...settingsForm, standardShippingFee: e.target.value })
+                  }
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                  Express Delivery Rate (PKR)
+                </label>
+                <input
+                  type="number"
+                  value={settingsForm.expressShippingFee}
+                  onChange={(e) =>
+                    setSettingsForm({ ...settingsForm, expressShippingFee: e.target.value })
+                  }
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
+                />
+              </div>
 
               {/* Hero Banner Section */}
               <div className="sm:col-span-2 pt-4 border-t border-[#E6DFD3]">
@@ -1932,6 +2060,54 @@ export default function AdminDashboardPage() {
                       value={settingsForm.heroImage}
                       onChange={(e) =>
                         setSettingsForm({ ...settingsForm, heroImage: e.target.value })
+                      }
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-xs font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Editorial Lookbook Banner Section */}
+              <div className="sm:col-span-2 pt-4 border-t border-[#E6DFD3]">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[#9E4733] mb-3">
+                  Homepage Editorial Lookbook Banner
+                </h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                      Lookbook Heading
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsForm.lookbookHeading}
+                      onChange={(e) =>
+                        setSettingsForm({ ...settingsForm, lookbookHeading: e.target.value })
+                      }
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                      Lookbook Description
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsForm.lookbookDescription}
+                      onChange={(e) =>
+                        setSettingsForm({ ...settingsForm, lookbookDescription: e.target.value })
+                      }
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                      Lookbook Image URL
+                    </label>
+                    <input
+                      type="text"
+                      value={settingsForm.lookbookImage}
+                      onChange={(e) =>
+                        setSettingsForm({ ...settingsForm, lookbookImage: e.target.value })
                       }
                       className="w-full px-3.5 py-2.5 rounded-xl border border-[#E6DFD3] text-xs font-mono"
                     />

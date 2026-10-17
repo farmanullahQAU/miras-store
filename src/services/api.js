@@ -284,6 +284,33 @@ export const apiService = {
     return newReview;
   },
 
+  async deleteProductReview(productId, reviewId) {
+    try {
+      await requestWorker(`/products/${productId}/reviews/${reviewId}`, {
+        method: 'DELETE',
+      });
+    } catch {
+      // Fallback
+    }
+    const products = readStorage(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
+    const updated = products.map((p) => {
+      if (p.id !== productId) return p;
+      const reviews = (p.reviews || []).filter((r) => r.id !== reviewId);
+      const avg =
+        reviews.length > 0
+          ? reviews.reduce((sum, r) => sum + Number(r.rating || 5), 0) / reviews.length
+          : 5.0;
+      return {
+        ...p,
+        reviews,
+        reviewCount: reviews.length,
+        rating: Number(avg.toFixed(1)),
+      };
+    });
+    writeStorage(STORAGE_KEYS.PRODUCTS, updated);
+    return true;
+  },
+
   async getOrders() {
     try {
       const data = await requestWorker('/orders');

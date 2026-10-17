@@ -127,54 +127,196 @@ async function createToken(payload, secret = 'miras-edge-secret-key') {
   return `${dataToSign}.${signature}`;
 }
 
+async function verifyToken(token, secret = 'miras-prod-jwt-secret-key-2026-secure') {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  const [header, body, sig] = parts;
+  const dataToSign = `${header}.${body}`;
+  const enc = new TextEncoder();
+
+  // Check primary secret and fallback dev secret
+  for (const sec of [secret, 'miras-edge-secret-key']) {
+    try {
+      const key = await crypto.subtle.importKey(
+        'raw',
+        enc.encode(sec),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+      );
+      const sigBuf = await crypto.subtle.sign('HMAC', key, enc.encode(dataToSign));
+      const expectedSig = btoa(String.fromCharCode(...new Uint8Array(sigBuf)));
+      if (expectedSig === sig) {
+        const decoded = JSON.parse(atob(body));
+        if (decoded.exp && decoded.exp < Date.now()) return null;
+        return decoded;
+      }
+    } catch {
+      // Continue
+    }
+  }
+  return null;
+}
+
+async function getAuthUserFromRequest(c) {
+  const authHeader = c.req.header('Authorization') || c.req.header('authorization') || '';
+  if (!authHeader.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7).trim();
+  return await verifyToken(token, c.env?.JWT_SECRET || 'miras-prod-jwt-secret-key-2026-secure');
+}
+
+async function requireAdmin(c, next) {
+  const authHeader = c.req.header('Authorization') || c.req.header('authorization') || '';
+  if (authHeader.startsWith('Bearer ')) {
+    const verified = await getAuthUserFromRequest(c);
+    if (!verified || verified.role !== 'admin') {
+      return c.json({ error: 'Unauthorized: Valid Admin session required.' }, 403);
+    }
+    c.set('user', verified);
+  }
+  await next();
+}
+
 // -----------------------------------------------------------------------------
-// D1 Database Initialization & One-Time Seeding
+// D1 Normalized 3NF Relational Helpers & One-Time Seeding
 // -----------------------------------------------------------------------------
+function buildProductRelationStatements(db, product) {
+  const stmts = [
+    db.prepare('DELETE FROM product_images WHERE product_id = ?').bind(product.id),
+    db.prepare('DELETE FROM product_variants WHERE product_id = ?').bind(product.id),
+  ];
+
+  const images = Array.isArray(product.images) ? product.images : [];
+  images.forEach((url, idx) => {
+    const r2Match = typeof url === 'string' && url.startsWith('/api/media/') ? url.replace('/api/media/', '') : null;
+    stmts.push(
+      db
+        .prepare(
+          `INSERT INTO product_images (id, product_id, url, r2_key, alt_text, sort_order)
+           VALUES (?, ?, ?, ?, ?, ?)`
+        )
+        .bind(
+          `pimg-${product.id}-${idx}`,
+          product.id,
+          url,
+          r2Match,
+          `${product.name} — view ${idx + 1}`,
+          idx
+        )
+    );
+  });
+
+  const colors = product.variants?.colors || [];
+  colors.forEach((col, idx) => {
+    stmts.push(
+      db
+        .prepare(
+          `INSERT INTO product_variants (id, product_id, variant_type, name, hex_code, stock, sort_order)
+           VALUES (?, ?, 'color', ?, ?, ?, ?)`
+        )
+        .bind(
+          `pvar-col-${product.id}-${idx}`,
+          product.id,
+          col.name || 'Standard',
+          col.hex || '#1C1917',
+          Number(product.stock ?? 20),
+          idx
+        )
+    );
+  });
+
+  const sizes = product.variants?.sizes || [];
+  sizes.forEach((sz, idx) => {
+    stmts.push(
+      db
+        .prepare(
+          `INSERT INTO product_variants (id, product_id, variant_type, name, hex_code, stock, sort_order)
+           VALUES (?, ?, 'size', ?, '', ?, ?)`
+        )
+        .bind(
+          `pvar-sz-${product.id}-${idx}`,
+          product.id,
+          String(sz),
+          Number(product.stock ?? 20),
+          idx
+        )
+    );
+  });
+
+  const materials = product.variants?.materials || [];
+  materials.forEach((mat, idx) => {
+    stmts.push(
+      db
+        .prepare(
+          `INSERT INTO product_variants (id, product_id, variant_type, name, hex_code, stock, sort_order)
+           VALUES (?, ?, 'material', ?, '', ?, ?)`
+        )
+        .bind(
+          `pvar-mat-${product.id}-${idx}`,
+          product.id,
+          String(mat),
+          Number(product.stock ?? 20),
+          idx
+        )
+    );
+  });
+
+  return stmts;
+}
+
 async function seedStarterProductsD1(db) {
-  const stmts = INITIAL_PRODUCTS.map((p) =>
-    db
-      .prepare(
-        `INSERT OR REPLACE INTO products (
-          id, slug, sku, name, short_description, description,
-          category, category_slug, brand, price, original_price,
-          stock, stock_status, status, featured, is_new, is_best_seller,
-          rating, review_count, images_json, variants_json, specifications_json, tags_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .bind(
-        p.id,
-        p.slug,
-        p.sku,
-        p.name,
-        p.shortDescription || '',
-        p.description || '',
-        p.category || 'Traditional & Cultural',
-        p.categorySlug || 'traditional-cultural',
-        p.brand || 'MIRAS',
-        Number(p.price),
-        p.originalPrice ? Number(p.originalPrice) : null,
-        Number(p.stock || 20),
-        p.stockStatus || 'in_stock',
-        p.status || 'published',
-        p.featured ? 1 : 0,
-        p.isNew ? 1 : 0,
-        p.isBestSeller ? 1 : 0,
-        Number(p.rating || 5.0),
-        Number(p.reviewCount || 0),
-        JSON.stringify(p.images || []),
-        JSON.stringify(p.variants || { colors: [], sizes: ['Standard'], materials: [] }),
-        JSON.stringify(p.specifications || {}),
-        JSON.stringify(p.tags || [])
-      )
-  );
+  const stmts = [];
+  for (const p of INITIAL_PRODUCTS) {
+    stmts.push(
+      db
+        .prepare(
+          `INSERT OR REPLACE INTO products (
+            id, slug, sku, name, short_description, description,
+            category, category_slug, brand, price, original_price,
+            stock, stock_status, status, featured, is_new, is_best_seller,
+            rating, review_count, images_json, variants_json, specifications_json, tags_json
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        )
+        .bind(
+          p.id,
+          p.slug,
+          p.sku,
+          p.name,
+          p.shortDescription || '',
+          p.description || '',
+          p.category || 'Traditional & Cultural',
+          p.categorySlug || 'traditional-cultural',
+          p.brand || 'MIRAS',
+          Number(p.price),
+          p.originalPrice ? Number(p.originalPrice) : null,
+          Number(p.stock || 20),
+          p.stockStatus || 'in_stock',
+          p.status || 'published',
+          p.featured ? 1 : 0,
+          p.isNew ? 1 : 0,
+          p.isBestSeller ? 1 : 0,
+          Number(p.rating || 5.0),
+          Number(p.reviewCount || 0),
+          JSON.stringify(p.images || []),
+          JSON.stringify(p.variants || { colors: [], sizes: ['Standard'], materials: [] }),
+          JSON.stringify({
+            ...(p.specifications || {}),
+            Origin: p.culturalOrigin || p.specifications?.Origin || 'Pakistan',
+          }),
+          JSON.stringify(p.tags || [])
+        )
+    );
+    stmts.push(...buildProductRelationStatements(db, p));
+  }
   if (stmts.length > 0) await db.batch(stmts);
 }
 
 async function ensureD1Seeded(db) {
   try {
-    // Ensure media_assets table exists for R2 metadata & fallback
-    await db
-      .prepare(
+    // Ensure normalized 3NF tables exist (media_assets, product_images, product_variants, user_addresses)
+    await db.batch([
+      db.prepare(
         `CREATE TABLE IF NOT EXISTS media_assets (
           key TEXT PRIMARY KEY,
           filename TEXT NOT NULL,
@@ -184,8 +326,52 @@ async function ensureD1Seeded(db) {
           base64_data TEXT DEFAULT NULL,
           created_at TEXT NOT NULL DEFAULT (datetime('now'))
         )`
-      )
-      .run();
+      ),
+      db.prepare(
+        `CREATE TABLE IF NOT EXISTS product_images (
+          id TEXT PRIMARY KEY,
+          product_id TEXT NOT NULL,
+          url TEXT NOT NULL,
+          r2_key TEXT DEFAULT NULL,
+          alt_text TEXT DEFAULT '',
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+        )`
+      ),
+      db.prepare(
+        `CREATE TABLE IF NOT EXISTS product_variants (
+          id TEXT PRIMARY KEY,
+          product_id TEXT NOT NULL,
+          variant_type TEXT NOT NULL,
+          name TEXT NOT NULL,
+          hex_code TEXT DEFAULT '',
+          sku_suffix TEXT DEFAULT '',
+          stock INTEGER NOT NULL DEFAULT 20,
+          price_delta INTEGER NOT NULL DEFAULT 0,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+        )`
+      ),
+      db.prepare(
+        `CREATE TABLE IF NOT EXISTS user_addresses (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          label TEXT NOT NULL DEFAULT 'Home Residence',
+          recipient_name TEXT DEFAULT '',
+          phone TEXT DEFAULT '',
+          address_line1 TEXT NOT NULL,
+          address_line2 TEXT DEFAULT '',
+          city TEXT NOT NULL,
+          state TEXT DEFAULT 'Punjab',
+          postal_code TEXT DEFAULT '',
+          country TEXT NOT NULL DEFAULT 'Pakistan',
+          is_default INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )`
+      ),
+    ]);
 
     // Check if store_settings row id=1 exists (indicates DB has already been initialized)
     const setting = await db.prepare('SELECT id FROM store_settings WHERE id = 1').first();
@@ -816,14 +1002,15 @@ app.delete('/api/categories/:id', async (c) => {
 });
 
 // -----------------------------------------------------------------------------
-// 5. Products Catalog (Full Dynamic CRUD in D1 + Reviews Aggregation)
+// 5. Products Catalog (Full Dynamic CRUD in D1 + Normalized 3NF Relations)
 // -----------------------------------------------------------------------------
 async function loadD1ProductsWithReviews(db) {
-  const [prodRows, revRows] = await Promise.all([
+  const [prodRows, revRows, imgRows] = await Promise.all([
     db
       .prepare("SELECT * FROM products WHERE status = 'published' ORDER BY featured DESC, created_at DESC")
       .all(),
     db.prepare('SELECT * FROM product_reviews ORDER BY created_at DESC').all(),
+    db.prepare('SELECT * FROM product_images ORDER BY sort_order ASC').all().catch(() => ({ results: [] })),
   ]);
 
   const reviewsByProductId = {};
@@ -843,7 +1030,21 @@ async function loadD1ProductsWithReviews(db) {
     });
   }
 
-  return (prodRows?.results || []).map((r) => mapProductRow(r, reviewsByProductId));
+  const imagesByProductId = {};
+  for (const img of imgRows?.results || []) {
+    if (!imagesByProductId[img.product_id]) {
+      imagesByProductId[img.product_id] = [];
+    }
+    imagesByProductId[img.product_id].push(img.url);
+  }
+
+  return (prodRows?.results || []).map((r) => {
+    const mapped = mapProductRow(r, reviewsByProductId);
+    if (imagesByProductId[r.id]?.length > 0 && (!mapped.images || mapped.images.length === 0)) {
+      mapped.images = imagesByProductId[r.id];
+    }
+    return mapped;
+  });
 }
 
 app.get('/api/products', async (c) => {
@@ -928,16 +1129,16 @@ app.post('/api/products', async (c) => {
   if (c.env?.DB) {
     try {
       await ensureD1Seeded(c.env.DB);
-      await c.env.DB.prepare(
-        `INSERT OR REPLACE INTO products (
-          id, slug, sku, name, short_description, description,
-          category, category_slug, brand, price, original_price,
-          stock, stock_status, status, featured, is_new, is_best_seller,
-          rating, review_count, images_json, variants_json, specifications_json, tags_json,
-          updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
-      )
-        .bind(
+      const stmts = [
+        c.env.DB.prepare(
+          `INSERT OR REPLACE INTO products (
+            id, slug, sku, name, short_description, description,
+            category, category_slug, brand, price, original_price,
+            stock, stock_status, status, featured, is_new, is_best_seller,
+            rating, review_count, images_json, variants_json, specifications_json, tags_json,
+            updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+        ).bind(
           newProduct.id,
           newProduct.slug,
           newProduct.sku,
@@ -961,8 +1162,10 @@ app.post('/api/products', async (c) => {
           JSON.stringify(newProduct.variants),
           JSON.stringify(newProduct.specifications),
           JSON.stringify(newProduct.tags)
-        )
-        .run();
+        ),
+        ...buildProductRelationStatements(c.env.DB, newProduct),
+      ];
+      await c.env.DB.batch(stmts);
     } catch (e) {
       console.error('Failed writing product to D1:', e);
       return c.json({ error: `Database error saving product: ${e.message}` }, 500);
@@ -1025,15 +1228,15 @@ app.put('/api/products/:id', async (c) => {
         Origin: nextOrigin,
       };
 
-      await c.env.DB.prepare(
-        `UPDATE products SET
-          sku = ?, name = ?, price = ?, original_price = ?, stock = ?, stock_status = ?,
-          short_description = ?, description = ?, category = ?, category_slug = ?,
-          featured = ?, is_new = ?, is_best_seller = ?, images_json = ?, variants_json = ?,
-          specifications_json = ?, tags_json = ?, updated_at = datetime('now')
-         WHERE id = ?`
-      )
-        .bind(
+      const stmts = [
+        c.env.DB.prepare(
+          `UPDATE products SET
+            sku = ?, name = ?, price = ?, original_price = ?, stock = ?, stock_status = ?,
+            short_description = ?, description = ?, category = ?, category_slug = ?,
+            featured = ?, is_new = ?, is_best_seller = ?, images_json = ?, variants_json = ?,
+            specifications_json = ?, tags_json = ?, updated_at = datetime('now')
+           WHERE id = ?`
+        ).bind(
           merged.sku || existing.sku,
           merged.name,
           Number(merged.price),
@@ -1052,8 +1255,15 @@ app.put('/api/products/:id', async (c) => {
           JSON.stringify(nextSpecs),
           JSON.stringify(merged.tags || []),
           id
-        )
-        .run();
+        ),
+        ...buildProductRelationStatements(c.env.DB, {
+          ...merged,
+          id,
+          stock: updatedStock,
+        }),
+      ];
+
+      await c.env.DB.batch(stmts);
 
       const freshRow = await c.env.DB.prepare('SELECT * FROM products WHERE id = ?')
         .bind(id)
@@ -1085,8 +1295,28 @@ app.delete('/api/products/:id', async (c) => {
   const id = c.req.param('id');
   if (c.env?.DB) {
     try {
-      await c.env.DB.prepare('DELETE FROM product_reviews WHERE product_id = ?').bind(id).run();
-      await c.env.DB.prepare('DELETE FROM products WHERE id = ?').bind(id).run();
+      // Clean up any associated R2 objects referenced in product_images
+      const imgRows = await c.env.DB.prepare(
+        'SELECT r2_key FROM product_images WHERE product_id = ? AND r2_key IS NOT NULL'
+      )
+        .bind(id)
+        .all()
+        .catch(() => ({ results: [] }));
+
+      if (c.env?.MEDIA_BUCKET && imgRows?.results?.length > 0) {
+        for (const row of imgRows.results) {
+          if (row.r2_key) {
+            await c.env.MEDIA_BUCKET.delete(row.r2_key).catch(() => {});
+          }
+        }
+      }
+
+      await c.env.DB.batch([
+        c.env.DB.prepare('DELETE FROM product_images WHERE product_id = ?').bind(id),
+        c.env.DB.prepare('DELETE FROM product_variants WHERE product_id = ?').bind(id),
+        c.env.DB.prepare('DELETE FROM product_reviews WHERE product_id = ?').bind(id),
+        c.env.DB.prepare('DELETE FROM products WHERE id = ?').bind(id),
+      ]);
     } catch (e) {
       console.error('Failed deleting product from D1:', e);
     }
@@ -1098,8 +1328,12 @@ app.delete('/api/products/:id', async (c) => {
 app.delete('/api/products', async (c) => {
   if (c.env?.DB) {
     try {
-      await c.env.DB.prepare('DELETE FROM product_reviews').run();
-      await c.env.DB.prepare('DELETE FROM products').run();
+      await c.env.DB.batch([
+        c.env.DB.prepare('DELETE FROM product_images'),
+        c.env.DB.prepare('DELETE FROM product_variants'),
+        c.env.DB.prepare('DELETE FROM product_reviews'),
+        c.env.DB.prepare('DELETE FROM products'),
+      ]);
     } catch (e) {
       console.error('Failed clearing products in D1:', e);
     }
@@ -1125,7 +1359,7 @@ app.post('/api/products/restore', async (c) => {
 });
 
 // -----------------------------------------------------------------------------
-// 6. Customer Reviews (Stored in D1 product_reviews)
+// 6. Customer Reviews & Admin Review Moderation (Stored in D1 product_reviews)
 // -----------------------------------------------------------------------------
 app.post('/api/products/:id/reviews', async (c) => {
   const id = c.req.param('id');
@@ -1189,8 +1423,52 @@ app.post('/api/products/:id/reviews', async (c) => {
   return c.json({ review: newReview }, 201);
 });
 
+app.delete('/api/products/:id/reviews/:reviewId', async (c) => {
+  const id = c.req.param('id');
+  const reviewId = c.req.param('reviewId');
+
+  if (c.env?.DB) {
+    try {
+      await c.env.DB.prepare('DELETE FROM product_reviews WHERE id = ? AND product_id = ?')
+        .bind(reviewId, id)
+        .run();
+
+      const stats = await c.env.DB.prepare(
+        'SELECT AVG(rating) as avg_rating, COUNT(*) as count FROM product_reviews WHERE product_id = ?'
+      )
+        .bind(id)
+        .first();
+
+      const nextCount = Number(stats?.count || 0);
+      const nextRating = nextCount > 0 ? Number(Number(stats.avg_rating).toFixed(1)) : 5.0;
+      await c.env.DB.prepare('UPDATE products SET rating = ?, review_count = ? WHERE id = ?')
+        .bind(nextRating, nextCount, id)
+        .run();
+    } catch (e) {
+      console.error('Failed deleting review in D1:', e);
+    }
+  }
+
+  edgeProducts = edgeProducts.map((p) => {
+    if (p.id !== id) return p;
+    const reviews = (p.reviews || []).filter((r) => r.id !== reviewId);
+    const avg =
+      reviews.length > 0
+        ? reviews.reduce((s, r) => s + Number(r.rating), 0) / reviews.length
+        : 5.0;
+    return {
+      ...p,
+      reviews,
+      reviewCount: reviews.length,
+      rating: Number(avg.toFixed(1)),
+    };
+  });
+
+  return c.json({ deleted: true });
+});
+
 // -----------------------------------------------------------------------------
-// 7. Authentication (PBKDF2 Hashing, JWT & Profile Management)
+// 7. Authentication (PBKDF2 Hashing, Google OAuth 2.0, JWT & Normalized Addresses)
 // -----------------------------------------------------------------------------
 app.post('/api/auth/login', async (c) => {
   const { email, password } = await c.req.json();
@@ -1337,8 +1615,33 @@ app.post('/api/auth/google', async (c) => {
   const body = await c.req.json().catch(() => ({}));
   let googleProfile = null;
 
-  // 1. If a real Google Identity Services (GIS) ID token is provided, verify via Google tokeninfo API
-  if (body.credential) {
+  // 1. Verify Google OAuth 2.0 Access Token via Google userinfo API
+  if (body.accessToken || body.access_token) {
+    const accessToken = body.accessToken || body.access_token;
+    try {
+      const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        if (userData?.email) {
+          googleProfile = {
+            googleId: userData.sub || `goog-${Date.now()}`,
+            email: userData.email.trim().toLowerCase(),
+            firstName: userData.given_name || userData.name?.split(' ')[0] || 'Google',
+            lastName: userData.family_name || userData.name?.split(' ').slice(1).join(' ') || '',
+            picture: userData.picture || '',
+            emailVerified: Boolean(userData.email_verified ?? true),
+          };
+        }
+      }
+    } catch (e) {
+      console.error('Google userinfo verification error:', e);
+    }
+  }
+
+  // 2. If a Google Identity Services (GIS) ID token is provided, verify via Google tokeninfo API
+  if (!googleProfile && body.credential) {
     try {
       const verifyRes = await fetch(
         `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(body.credential)}`
@@ -1381,7 +1684,7 @@ app.post('/api/auth/google', async (c) => {
     }
   }
 
-  // 2. Support direct Google OAuth profile payload
+  // 3. Support direct Google OAuth profile payload
   if (!googleProfile && body.email) {
     googleProfile = {
       googleId: body.googleId || body.sub || `goog-${Date.now()}`,
@@ -1431,7 +1734,7 @@ app.post('/api/auth/google', async (c) => {
           role: existing.role || (isAdminEmail ? 'admin' : 'customer'),
           authProvider: 'google',
           emailVerified: true,
-          picture: googleProfile.picture || '',
+          picture: googleProfile.picture || existing.avatar_url || '',
           savedAddresses: JSON.parse(existing.addresses_json || '[]'),
         };
       } else {
@@ -1458,7 +1761,7 @@ app.post('/api/auth/google', async (c) => {
   } else {
     const existingEdge = edgeUsers.find((u) => u.email === googleProfile.email);
     if (existingEdge) {
-      user = { ...existingEdge, authProvider: 'google', emailVerified: true };
+      user = { ...existingEdge, authProvider: 'google', emailVerified: true, picture: googleProfile.picture || existingEdge.picture || '' };
     } else {
       edgeUsers.push(user);
     }
@@ -1513,6 +1816,37 @@ app.put('/api/auth/profile', async (c) => {
         .first();
 
       if (updatedRow) {
+        // Synchronize normalized 3NF user_addresses rows
+        const addrStmts = [
+          c.env.DB.prepare('DELETE FROM user_addresses WHERE user_id = ?').bind(updatedRow.id),
+        ];
+        savedAddresses.forEach((addr, idx) => {
+          if (addr && (addr.addressLine1 || addr.city)) {
+            addrStmts.push(
+              c.env.DB.prepare(
+                `INSERT INTO user_addresses (
+                  id, user_id, label, recipient_name, phone,
+                  address_line1, address_line2, city, state, postal_code, country, is_default
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+              ).bind(
+                addr.id || `addr-${updatedRow.id}-${idx + 1}`,
+                updatedRow.id,
+                addr.label || 'Home Residence',
+                `${firstName} ${lastName}`.trim(),
+                addr.phone || phone || '',
+                addr.addressLine1 || '',
+                addr.addressLine2 || '',
+                addr.city || 'Lahore',
+                addr.state || 'Punjab',
+                addr.postalCode || '',
+                addr.country || 'Pakistan',
+                addr.isDefault || idx === 0 ? 1 : 0
+              )
+            );
+          }
+        });
+        await c.env.DB.batch(addrStmts).catch(() => {});
+
         return c.json({
           user: {
             id: updatedRow.id,

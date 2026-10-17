@@ -172,41 +172,45 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {[
-              {
-                region: 'Kashmir',
-                title: 'Kashmir & Swat',
-                craft: 'Pashmina & Sozni Shawls',
-              },
-              {
-                region: 'Punjab',
-                title: 'Punjab & Multan',
-                craft: 'Blue Pottery & Lahori Tilla',
-              },
-              {
-                region: 'Sindh',
-                title: 'Sindh (Hala & Bhitshah)',
-                craft: 'Natural Indigo Ajrak & Ralli',
-              },
-              {
-                region: 'Balochistan',
-                title: 'Balochistan (Quetta)',
-                craft: 'Balochi Doch & Mirror Work',
-              },
-              {
-                region: 'Peshawar',
-                title: 'Khyber Pakhtunkhwa',
-                craft: 'Full-Grain Leather & Brass',
-              },
-              {
-                region: 'Hunza',
-                title: 'Gilgit & Chitral',
-                craft: 'Hand-Spun Patti Wool & Caps',
-              },
-            ].map((item) => (
+            {(
+              settings.regionalHighlights && settings.regionalHighlights.length > 0
+                ? settings.regionalHighlights
+                : [
+                    {
+                      region: 'Kashmir',
+                      title: 'Kashmir & Swat',
+                      craft: 'Pashmina & Sozni Shawls',
+                    },
+                    {
+                      region: 'Punjab',
+                      title: 'Punjab & Multan',
+                      craft: 'Blue Pottery & Lahori Tilla',
+                    },
+                    {
+                      region: 'Sindh',
+                      title: 'Sindh (Hala & Bhitshah)',
+                      craft: 'Natural Indigo Ajrak & Ralli',
+                    },
+                    {
+                      region: 'Balochistan',
+                      title: 'Balochistan (Quetta)',
+                      craft: 'Balochi Doch & Mirror Work',
+                    },
+                    {
+                      region: 'Peshawar',
+                      title: 'Khyber Pakhtunkhwa',
+                      craft: 'Full-Grain Leather & Brass',
+                    },
+                    {
+                      region: 'Hunza',
+                      title: 'Gilgit & Chitral',
+                      craft: 'Hand-Spun Patti Wool & Caps',
+                    },
+                  ]
+            ).map((item) => (
               <Link
-                key={item.region}
-                to={`/shop?region=${encodeURIComponent(item.region)}`}
+                key={item.region || item.title}
+                to={`/shop?region=${encodeURIComponent(item.region || item.title)}`}
                 className="group bg-white hover:bg-[#1C1A17] rounded-xl p-4 border border-[#E6DFD3] hover:border-[#1C1A17] transition-all flex flex-col justify-between"
               >
                 <div>
@@ -300,41 +304,46 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Khaadi & Diners Inspired Editorial Lookbook & Craft Spotlight */}
+      {/* Editorial Lookbook & Craft Spotlight (Configurable in Admin -> Store Settings) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           {/* Left Editorial Card: Ready-to-Wear & Seasonal Edit */}
           <div className="lg:col-span-7 relative rounded-2xl overflow-hidden bg-[#1C1A17] text-white min-h-[340px] flex items-end p-7 sm:p-10 group">
             <img
-              src="https://images.unsplash.com/photo-1606722590583-6951b5ea92ad?auto=format&fit=crop&w=1400&q=85"
-              alt="Seasonal Heritage Edit"
+              src={
+                settings.lookbookBanner?.image ||
+                'https://images.unsplash.com/photo-1606722590583-6951b5ea92ad?auto=format&fit=crop&w=1400&q=85'
+              }
+              alt={settings.lookbookBanner?.heading || 'Seasonal Heritage Edit'}
               loading="lazy"
               className="absolute inset-0 w-full h-full object-cover opacity-55 group-hover:scale-105 transition-transform duration-700"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
             <div className="relative space-y-3 max-w-lg">
               <span className="inline-block text-[10px] uppercase tracking-[0.25em] text-[#C59B5F] font-semibold">
-                Seasonal Lookbook • Inspired by Heritage
+                {settings.lookbookBanner?.eyebrow || 'Seasonal Lookbook • Inspired by Heritage'}
               </span>
               <h2 className="font-serif text-2xl sm:text-4xl font-semibold leading-tight">
-                Timeless Eastern Craft & Contemporary Silhouettes
+                {settings.lookbookBanner?.heading ||
+                  'Timeless Eastern Craft & Contemporary Silhouettes'}
               </h2>
               <p className="text-xs sm:text-sm text-white/80 leading-relaxed">
-                From hand-loomed Kashmiri & Swati shawls to tailored seasonal apparel and artisan brassware — crafted for everyday elegance and festive occasions.
+                {settings.lookbookBanner?.description ||
+                  'From hand-loomed Kashmiri & Swati shawls to tailored seasonal apparel and artisan brassware — crafted for everyday elegance and festive occasions.'}
               </p>
               <div className="pt-2 flex flex-wrap gap-3">
                 <Link
-                  to="/category/traditional-cultural"
+                  to={settings.lookbookBanner?.primaryCtaLink || '/category/traditional-cultural'}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#9E4733] hover:bg-[#823624] text-white text-xs font-semibold uppercase tracking-wider transition-colors"
                 >
-                  <span>Explore Heritage Edit</span>
+                  <span>{settings.lookbookBanner?.primaryCtaText || 'Explore Heritage Edit'}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
                 <Link
-                  to="/category/fashion-apparel"
+                  to={settings.lookbookBanner?.secondaryCtaLink || '/category/fashion-apparel'}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white/15 hover:bg-white/25 backdrop-blur-xs text-white text-xs font-semibold uppercase tracking-wider transition-colors"
                 >
-                  <span>Shop Apparel</span>
+                  <span>{settings.lookbookBanner?.secondaryCtaText || 'Shop Apparel'}</span>
                 </Link>
               </div>
             </div>
@@ -344,13 +353,16 @@ export default function HomePage() {
           <div className="lg:col-span-5 rounded-2xl bg-[#F3EDE2] border border-[#E6DFD3] p-7 sm:p-10 flex flex-col justify-between space-y-6">
             <div className="space-y-3">
               <span className="text-[11px] uppercase tracking-[0.2em] text-[#9E4733] font-semibold">
-                The Collector&apos;s Edit
+                {settings.lookbookBanner?.collectorEyebrow || "The Collector's Edit"}
               </span>
               <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-[#1C1A17] leading-snug">
-                Signature Oud Attars, Timepieces & Gifting
+                {settings.lookbookBanner?.collectorHeading ||
+                  'Signature Oud Attars, Timepieces & Gifting'}
               </h3>
               <p className="text-xs sm:text-sm text-[#5C564F] leading-relaxed">
-                Complete your wardrobe with long-lasting artisanal fragrances, statement accessories, and presentation-ready gift boxes. Enjoy complimentary nationwide delivery on orders above Rs.{' '}
+                {settings.lookbookBanner?.collectorDescription ||
+                  'Complete your wardrobe with long-lasting artisanal fragrances, statement accessories, and presentation-ready gift boxes.'}{' '}
+                Enjoy complimentary nationwide delivery on orders above Rs.{' '}
                 {(settings.shipping?.freeShippingThreshold || 5000).toLocaleString()}.
               </p>
             </div>
@@ -372,10 +384,12 @@ export default function HomePage() {
 
             <div>
               <Link
-                to="/category/gifts-lifestyle"
+                to={settings.lookbookBanner?.collectorCtaLink || '/category/gifts-lifestyle'}
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#1C1A17] hover:bg-[#9E4733] text-white text-xs font-semibold uppercase tracking-widest transition-colors"
               >
-                <span>Explore Gifts & Fragrances</span>
+                <span>
+                  {settings.lookbookBanner?.collectorCtaText || 'Explore Gifts & Fragrances'}
+                </span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
