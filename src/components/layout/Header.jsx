@@ -27,13 +27,11 @@ export default function Header() {
   } = useStore();
 
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isRegionDropdownOpen, setIsRegionDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
-    setIsDropdownOpen(false);
     setIsRegionDropdownOpen(false);
     setIsMobileMenuOpen(false);
   }, [location.pathname, location.search]);
@@ -52,8 +50,7 @@ export default function Header() {
       if (origin && !map.has(origin)) {
         map.set(origin, {
           name: origin,
-          craft: p.specifications?.Craft || p.category || 'Regional Craft',
-          image: p.images?.[0] || '',
+          category: p.category || 'Regional Specialty',
         });
       }
     }
@@ -61,22 +58,24 @@ export default function Header() {
   }, [products]);
 
   const navLinkClass = ({ isActive }) =>
-    `text-[13px] font-medium tracking-wide transition-colors py-2 ${
-      isActive ? 'text-[#B85338] font-semibold' : 'text-[#1C1917] hover:text-[#B85338]'
+    `text-[12px] uppercase tracking-[0.14em] transition-colors py-2.5 whitespace-nowrap ${
+      isActive
+        ? 'text-[#B85338] font-semibold border-b-2 border-[#B85338]'
+        : 'text-[#1C1917] hover:text-[#B85338] font-medium'
     }`;
 
   return (
     <header
       className={`sticky top-0 z-40 transition-all duration-200 ${
         isScrolled
-          ? 'bg-[#FAF7F2]/95 backdrop-blur-md shadow-xs border-b border-stone-200'
-          : 'bg-[#FAF7F2] border-b border-stone-200'
+          ? 'bg-white/95 backdrop-blur-md shadow-xs border-b border-stone-200/80'
+          : 'bg-[#FAF7F2] border-b border-stone-200/80'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20 gap-4">
           {/* Left: Mobile Trigger & Track Order Link */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4 min-w-[110px]">
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
@@ -88,73 +87,64 @@ export default function Header() {
 
             <Link
               to="/track-order"
-              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-stone-600 hover:text-[#B85338] transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-stone-600 hover:text-[#1C1917] transition-colors"
             >
               <Package className="w-3.5 h-3.5 text-[#B85338]" />
               <span>Track Order</span>
             </Link>
 
-            <Link
-              to="/admin"
-              className={`hidden md:inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded transition-colors ${
-                user?.role === 'admin'
-                  ? 'bg-[#6B2737] text-white hover:bg-[#521C29]'
-                  : 'text-stone-600 hover:text-[#1C1917] hover:bg-stone-200/60'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-[#B85338]" />
-              <span>{user?.role === 'admin' ? 'Admin Console' : 'Seller Portal'}</span>
-            </Link>
+            {user?.role === 'admin' && (
+              <Link
+                to="/admin"
+                className="hidden md:inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded bg-[#1C1917] text-white hover:bg-[#B85338] transition-colors"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-[#C59B5F]" />
+                <span>Admin</span>
+              </Link>
+            )}
           </div>
 
-          {/* Center: Brand Logo */}
+          {/* Center: Clean Editorial Brand Logo */}
           <div className="flex-1 lg:flex-initial text-center">
-            <Link to="/" className="inline-flex flex-col items-center group">
-              <div className="flex items-center gap-2.5">
-                <span
-                  aria-hidden="true"
-                  className="w-7 h-7 rounded bg-[#1C1917] flex items-center justify-center border border-[#C59B5F]/50 group-hover:bg-[#B85338] transition-colors"
-                >
-                  <span className="w-2.5 h-2.5 rotate-45 border border-[#C59B5F] bg-[#B85338] group-hover:bg-white transition-colors" />
-                </span>
-                <span className="font-serif text-2xl sm:text-3xl font-semibold tracking-[0.16em] uppercase text-[#1C1917]">
-                  {brandConfig.brandName}
-                </span>
-              </div>
+            <Link to="/" className="inline-flex flex-col items-center">
+              <span className="font-serif text-2xl sm:text-3xl font-semibold tracking-[0.22em] uppercase text-[#1C1917]">
+                {brandConfig.brandName}
+              </span>
             </Link>
           </div>
 
           {/* Right: Search, Profile, Wishlist, Cart */}
-          <div className="flex items-center justify-end gap-1 sm:gap-2">
+          <div className="flex items-center justify-end gap-1 sm:gap-2 min-w-[110px]">
             <button
               type="button"
               onClick={() => setIsSearchOpen(true)}
               aria-label="Search products"
-              className="p-2.5 text-[#1C1917] hover:text-[#B85338] rounded-full hover:bg-stone-200/50 transition-colors cursor-pointer flex items-center gap-1.5"
+              className="p-2.5 text-[#1C1917] hover:text-[#B85338] rounded-full hover:bg-stone-200/40 transition-colors cursor-pointer flex items-center gap-1.5"
             >
               <Search className="w-5 h-5" />
-              <span className="hidden xl:inline text-xs font-medium text-stone-600">Search</span>
             </button>
 
             <Link
               to={user ? '/account' : '/login'}
               aria-label={user ? 'My Profile' : 'Sign in'}
-              className="p-2.5 text-[#1C1917] hover:text-[#B85338] rounded-full hover:bg-stone-200/50 transition-colors flex items-center gap-1.5"
+              className="p-2.5 text-[#1C1917] hover:text-[#B85338] rounded-full hover:bg-stone-200/40 transition-colors flex items-center gap-1.5"
             >
               <User className="w-5 h-5" />
-              <span className="hidden xl:inline text-xs font-medium text-[#1C1917] max-w-[90px] truncate">
-                {user ? user.firstName : 'Sign In'}
-              </span>
+              {user && (
+                <span className="hidden xl:inline text-xs font-medium text-[#1C1917] max-w-[85px] truncate">
+                  {user.firstName}
+                </span>
+              )}
             </Link>
 
             <Link
               to="/wishlist"
               aria-label={`Wishlist (${wishlist.length} items)`}
-              className="relative p-2.5 text-[#1C1917] hover:text-[#B85338] rounded-full hover:bg-stone-200/50 transition-colors"
+              className="relative p-2.5 text-[#1C1917] hover:text-[#B85338] rounded-full hover:bg-stone-200/40 transition-colors"
             >
               <Heart className="w-5 h-5" />
               {wishlist.length > 0 && (
-                <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#6B2737] text-white text-[10px] font-semibold flex items-center justify-center">
+                <span className="absolute top-1.5 right-1.5 min-w-[17px] h-[17px] px-1 rounded-full bg-[#1C1917] text-white text-[10px] font-semibold flex items-center justify-center">
                   {wishlist.length}
                 </span>
               )}
@@ -164,72 +154,38 @@ export default function Header() {
               type="button"
               onClick={() => setIsCartDrawerOpen(true)}
               aria-label={`Shopping bag (${cartTotals.itemCount} items)`}
-              className="relative p-2.5 text-[#1C1917] hover:text-[#B85338] rounded-full hover:bg-stone-200/50 transition-colors cursor-pointer flex items-center gap-1.5"
+              className="relative p-2.5 text-[#1C1917] hover:text-[#B85338] rounded-full hover:bg-stone-200/40 transition-colors cursor-pointer flex items-center gap-1.5"
             >
               <ShoppingBag className="w-5 h-5" />
-              <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[#B85338] text-white text-[11px] font-semibold flex items-center justify-center">
-                {cartTotals.itemCount}
-              </span>
+              {cartTotals.itemCount > 0 && (
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#B85338] text-white text-[10px] font-semibold flex items-center justify-center">
+                  {cartTotals.itemCount}
+                </span>
+              )}
             </button>
           </div>
         </div>
 
-        {/* Desktop Primary Navigation */}
+        {/* Desktop Direct Department & Regional Navigation (Khaadi / Sapphire Standard) */}
         <nav
           aria-label="Store navigation"
-          className="hidden lg:flex items-center justify-center gap-8 border-t border-stone-200/70 py-2.5"
+          className="hidden lg:flex items-center justify-center gap-7 border-t border-stone-200/60"
         >
-          <NavLink to="/" end className={navLinkClass}>
-            Home
+          <NavLink to="/collections/new-arrivals" className={navLinkClass}>
+            New In
           </NavLink>
 
-          <NavLink to="/shop" className={navLinkClass}>
+          <NavLink to="/shop" end className={navLinkClass}>
             Shop All
           </NavLink>
 
-          {/* Categories Dropdown */}
-          <div
-            className="relative"
-            onMouseEnter={() => setIsDropdownOpen(true)}
-            onMouseLeave={() => setIsDropdownOpen(false)}
-          >
-            <button
-              type="button"
-              onClick={() => setIsDropdownOpen((prev) => !prev)}
-              aria-expanded={isDropdownOpen}
-              className="inline-flex items-center gap-1 text-[13px] font-medium tracking-wide text-[#1C1917] hover:text-[#B85338] py-2 cursor-pointer"
-            >
-              <span>Categories</span>
-              <ChevronDown
-                className={`w-3.5 h-3.5 transition-transform ${
-                  isDropdownOpen ? 'rotate-180 text-[#B85338]' : ''
-                }`}
-              />
-            </button>
+          {categories.slice(0, 5).map((cat) => (
+            <NavLink key={cat.id || cat.slug} to={`/category/${cat.slug}`} className={navLinkClass}>
+              {cat.name}
+            </NavLink>
+          ))}
 
-            {isDropdownOpen && (
-              <div className="absolute left-0 top-full pt-2 w-64 z-50">
-                <div className="bg-white border border-stone-200 rounded-lg shadow-xl py-2">
-                  {categories.map((cat) => (
-                    <Link
-                      key={cat.id}
-                      to={`/category/${cat.slug}`}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#FAF7F2] text-xs font-medium text-[#1C1917] hover:text-[#B85338] transition-colors"
-                    >
-                      <img
-                        src={cat.image}
-                        alt=""
-                        className="w-8 h-8 rounded object-cover border border-stone-200"
-                      />
-                      <span>{cat.name}</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Shop by Cultural Region Dropdown */}
+          {/* Shop by Region Dropdown */}
           {regionsList.length > 0 && (
             <div
               className="relative"
@@ -240,10 +196,10 @@ export default function Header() {
                 type="button"
                 onClick={() => setIsRegionDropdownOpen((prev) => !prev)}
                 aria-expanded={isRegionDropdownOpen}
-                className="inline-flex items-center gap-1 text-[13px] font-medium tracking-wide text-[#1C1917] hover:text-[#B85338] py-2 cursor-pointer"
+                className="inline-flex items-center gap-1 text-[12px] uppercase tracking-[0.14em] font-medium text-[#1C1917] hover:text-[#B85338] py-2.5 cursor-pointer"
               >
                 <MapPin className="w-3.5 h-3.5 text-[#B85338]" />
-                <span>Shop by Region</span>
+                <span>Regions</span>
                 <ChevronDown
                   className={`w-3.5 h-3.5 transition-transform ${
                     isRegionDropdownOpen ? 'rotate-180 text-[#B85338]' : ''
@@ -252,24 +208,23 @@ export default function Header() {
               </button>
 
               {isRegionDropdownOpen && (
-                <div className="absolute left-0 top-full pt-2 w-72 z-50">
-                  <div className="bg-white border border-stone-200 rounded-lg shadow-xl py-2">
+                <div className="absolute left-0 top-full pt-1 w-64 z-50">
+                  <div className="bg-white border border-stone-200 rounded-xl shadow-xl py-2">
                     <div className="px-4 py-1.5 border-b border-stone-100">
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-[#B85338]">
-                        Pakistani Regional Craftsmanship
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">
+                        Explore by Region
                       </p>
                     </div>
                     {regionsList.map((reg) => (
                       <Link
                         key={reg.name}
                         to={`/shop?region=${encodeURIComponent(reg.name)}`}
-                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#FAF7F2] text-xs font-medium text-[#1C1917] hover:text-[#B85338] transition-colors"
+                        className="flex items-center justify-between px-4 py-2.5 hover:bg-[#FAF7F2] text-xs text-[#1C1917] hover:text-[#B85338] transition-colors"
                       >
-                        <MapPin className="w-4 h-4 text-[#B85338] shrink-0" />
-                        <div className="min-w-0">
-                          <p className="font-semibold text-[#1C1917] truncate">{reg.name}</p>
-                          <p className="text-[10px] text-stone-500 truncate">{reg.craft}</p>
-                        </div>
+                        <span className="font-medium truncate">{reg.name}</span>
+                        <span className="text-[10px] text-stone-400 ml-2 shrink-0">
+                          {reg.category}
+                        </span>
                       </Link>
                     ))}
                   </div>
@@ -278,19 +233,11 @@ export default function Header() {
             </div>
           )}
 
-          <NavLink to="/collections/new-arrivals" className={navLinkClass}>
-            New Arrivals
-          </NavLink>
-
-          <NavLink to="/collections/best-sellers" className={navLinkClass}>
-            Best Sellers
-          </NavLink>
-
           <NavLink
             to="/collections/sale"
-            className="text-[13px] font-semibold tracking-wide text-[#B85338] hover:text-[#6B2737] py-2"
+            className="text-[12px] uppercase tracking-[0.14em] font-semibold text-[#B85338] hover:text-[#6B2737] py-2.5"
           >
-            Special Offers
+            Sale
           </NavLink>
         </nav>
       </div>
@@ -307,10 +254,10 @@ export default function Header() {
             className="fixed inset-0 bg-black/50 backdrop-blur-xs"
             onClick={() => setIsMobileMenuOpen(false)}
           />
-          <div className="relative w-full max-w-xs bg-[#FAF7F2] h-full overflow-y-auto shadow-2xl p-5 flex flex-col justify-between z-10">
+          <div className="relative w-full max-w-xs bg-white h-full overflow-y-auto shadow-2xl p-5 flex flex-col justify-between z-10">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-stone-200">
-                <span className="font-serif text-xl font-semibold tracking-widest uppercase text-[#1C1917]">
+                <span className="font-serif text-xl font-semibold tracking-[0.2em] uppercase text-[#1C1917]">
                   {brandConfig.brandName}
                 </span>
                 <button
@@ -323,94 +270,82 @@ export default function Header() {
                 </button>
               </div>
 
-              <div className="py-4 space-y-1 border-b border-stone-200">
+              <div className="py-4 space-y-1 border-b border-stone-100">
                 <Link
-                  to="/"
-                  className="block px-3 py-2.5 rounded-md text-sm font-medium text-[#1C1917] hover:bg-stone-200/60"
+                  to="/collections/new-arrivals"
+                  className="block px-3 py-2.5 rounded-lg text-sm font-medium text-[#1C1917] hover:bg-stone-100"
                 >
-                  Home
+                  New In
                 </Link>
                 <Link
                   to="/shop"
-                  className="block px-3 py-2.5 rounded-md text-sm font-semibold text-[#1C1917] hover:bg-stone-200/60"
+                  className="block px-3 py-2.5 rounded-lg text-sm font-medium text-[#1C1917] hover:bg-stone-100"
                 >
-                  Shop All Products
+                  Shop All
                 </Link>
-                <Link
-                  to="/collections/new-arrivals"
-                  className="block px-3 py-2.5 rounded-md text-sm font-medium text-[#1C1917] hover:bg-stone-200/60"
-                >
-                  New Arrivals
-                </Link>
-                <Link
-                  to="/collections/best-sellers"
-                  className="block px-3 py-2.5 rounded-md text-sm font-medium text-[#1C1917] hover:bg-stone-200/60"
-                >
-                  Best Sellers
-                </Link>
+                {categories.map((cat) => (
+                  <Link
+                    key={cat.id || cat.slug}
+                    to={`/category/${cat.slug}`}
+                    className="block px-3 py-2.5 rounded-lg text-sm text-stone-700 hover:bg-stone-100"
+                  >
+                    {cat.name}
+                  </Link>
+                ))}
                 <Link
                   to="/collections/sale"
-                  className="block px-3 py-2.5 rounded-md text-sm font-semibold text-[#B85338] hover:bg-stone-200/60"
+                  className="block px-3 py-2.5 rounded-lg text-sm font-semibold text-[#B85338] hover:bg-stone-100"
                 >
-                  Special Offers & Sale
+                  Sale
                 </Link>
-              </div>
-
-              <div className="py-4 border-b border-stone-200">
-                <p className="px-3 text-[11px] font-semibold uppercase tracking-widest text-stone-500 mb-2">
-                  Departments
-                </p>
-                <div className="space-y-1">
-                  {categories.map((cat) => (
-                    <Link
-                      key={cat.id}
-                      to={`/category/${cat.slug}`}
-                      className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-stone-700 hover:bg-stone-200/60"
-                    >
-                      <img
-                        src={cat.image}
-                        alt=""
-                        className="w-7 h-7 rounded object-cover border border-stone-300"
-                      />
-                      <span>{cat.name}</span>
-                    </Link>
-                  ))}
-                </div>
               </div>
 
               {regionsList.length > 0 && (
-                <div className="py-4 border-b border-stone-200">
-                  <p className="px-3 text-[11px] font-semibold uppercase tracking-widest text-[#B85338] mb-2">
-                    Shop by Cultural Region
+                <div className="py-4 border-b border-stone-100">
+                  <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-2">
+                    Explore by Region
                   </p>
-                  <div className="space-y-1">
+                  <div className="flex flex-wrap gap-1.5 px-3">
                     {regionsList.map((reg) => (
                       <Link
                         key={reg.name}
                         to={`/shop?region=${encodeURIComponent(reg.name)}`}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-stone-700 hover:bg-stone-200/60"
+                        className="px-2.5 py-1 rounded-full bg-[#FAF7F2] border border-stone-200 text-xs font-medium text-[#1C1917]"
                       >
-                        <MapPin className="w-3.5 h-3.5 text-[#B85338]" />
-                        <span>{reg.name}</span>
+                        {reg.name}
                       </Link>
                     ))}
                   </div>
                 </div>
               )}
 
-              <div className="py-4 space-y-2 text-sm">
-                <Link to={user ? '/account' : '/login'} className="block px-3 py-2 font-medium">
-                  {user ? `My Profile (${user.firstName})` : 'Sign In / Create Account'}
+              <div className="py-4 space-y-1 text-sm">
+                <Link
+                  to={user ? '/account' : '/login'}
+                  className="block px-3 py-2 rounded-lg text-stone-700 hover:bg-stone-100"
+                >
+                  {user ? `Account (${user.firstName})` : 'Sign In / Register'}
                 </Link>
-                <Link to="/track-order" className="block px-3 py-2 font-medium">
-                  Track My Order
+                <Link
+                  to="/track-order"
+                  className="block px-3 py-2 rounded-lg text-stone-700 hover:bg-stone-100"
+                >
+                  Track Order
                 </Link>
-                <Link to="/wishlist" className="block px-3 py-2 font-medium">
-                  Saved Wishlist ({wishlist.length})
+                <Link
+                  to="/wishlist"
+                  className="block px-3 py-2 rounded-lg text-stone-700 hover:bg-stone-100"
+                >
+                  Wishlist ({wishlist.length})
                 </Link>
-                <Link to="/admin" className="block px-3 py-2 font-semibold text-[#6B2737]">
-                  Seller Admin Dashboard
-                </Link>
+                {user?.role === 'admin' && (
+                  <Link
+                    to="/admin"
+                    className="block px-3 py-2 rounded-lg font-semibold text-[#B85338]"
+                  >
+                    Admin Dashboard
+                  </Link>
+                )}
               </div>
             </div>
           </div>

@@ -366,7 +366,7 @@ export default function CatalogPage({ mode = 'shop' }) {
       {/* Price Range Filter */}
       <div className="pt-5 border-t border-stone-200">
         <h3 className="font-semibold uppercase tracking-wider text-stone-700 mb-2.5">
-          Price Range (PKR Base)
+          Price
         </h3>
         <div className="grid grid-cols-2 gap-2 mb-2.5">
           <div>
@@ -426,7 +426,7 @@ export default function CatalogPage({ mode = 'shop' }) {
       {/* Availability & Sale Toggles */}
       <div className="pt-5 border-t border-stone-200 space-y-2.5">
         <h3 className="font-semibold uppercase tracking-wider text-stone-700 mb-2">
-          Availability & Offers
+          Availability
         </h3>
         <label className="flex items-center gap-2.5 cursor-pointer text-stone-700">
           <input
@@ -444,79 +444,85 @@ export default function CatalogPage({ mode = 'shop' }) {
             onChange={(e) => updateFilter('onSale', e.target.checked ? 'true' : '')}
             className="rounded border-stone-300 text-[#B85338] focus:ring-[#B85338]"
           />
-          <span>Discounted / Archive Sale</span>
+          <span>On Sale</span>
         </label>
       </div>
 
-      {/* Material Filter */}
-      <div className="pt-5 border-t border-stone-200">
-        <h3 className="font-semibold uppercase tracking-wider text-stone-700 mb-2.5">
-          Material & Craft Medium
-        </h3>
-        <div className="flex flex-wrap gap-1.5">
-          {facets.materials.map((mat) => (
-            <button
-              key={mat}
-              type="button"
-              onClick={() => updateFilter('material', materialParam === mat ? '' : mat)}
-              className={`px-2.5 py-1 rounded border text-[11px] cursor-pointer transition-colors ${
-                materialParam === mat
-                  ? 'bg-[#1C1917] text-white border-[#1C1917]'
-                  : 'bg-white text-stone-700 border-stone-200 hover:border-stone-400'
-              }`}
-            >
-              {mat}
-            </button>
-          ))}
+      {/* Material / Specialty Filter */}
+      {facets.materials.length > 0 && (
+        <div className="pt-5 border-t border-stone-200">
+          <h3 className="font-semibold uppercase tracking-wider text-stone-700 mb-2.5">
+            Type & Material
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
+            {facets.materials.map((mat) => (
+              <button
+                key={mat}
+                type="button"
+                onClick={() => updateFilter('material', materialParam === mat ? '' : mat)}
+                className={`px-2.5 py-1 rounded border text-[11px] cursor-pointer transition-colors ${
+                  materialParam === mat
+                    ? 'bg-[#1C1917] text-white border-[#1C1917]'
+                    : 'bg-white text-stone-700 border-stone-200 hover:border-stone-400'
+                }`}
+              >
+                {mat}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Color Filter */}
-      <div className="pt-5 border-t border-stone-200">
-        <h3 className="font-semibold uppercase tracking-wider text-stone-700 mb-2.5">
-          Color Palette
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          {facets.colors.map((c) => (
-            <button
-              key={c.name}
-              type="button"
-              onClick={() => updateFilter('color', colorParam === c.name ? '' : c.name)}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] cursor-pointer ${
-                colorParam === c.name
-                  ? 'border-[#B85338] bg-[#B85338]/10 font-semibold text-[#1C1917]'
-                  : 'border-stone-200 bg-white text-stone-600'
-              }`}
-            >
-              <span
-                className="w-3 h-3 rounded-full border border-stone-300"
-                style={{ backgroundColor: c.hex }}
-              />
-              <span>{c.name}</span>
-            </button>
-          ))}
+      {facets.colors.length > 0 && (
+        <div className="pt-5 border-t border-stone-200">
+          <h3 className="font-semibold uppercase tracking-wider text-stone-700 mb-2.5">
+            Color
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {facets.colors.map((c) => (
+              <button
+                key={c.name}
+                type="button"
+                onClick={() => updateFilter('color', colorParam === c.name ? '' : c.name)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] cursor-pointer ${
+                  colorParam === c.name
+                    ? 'border-[#B85338] bg-[#B85338]/10 font-semibold text-[#1C1917]'
+                    : 'border-stone-200 bg-white text-stone-600'
+                }`}
+              >
+                <span
+                  className="w-3 h-3 rounded-full border border-stone-300"
+                  style={{ backgroundColor: c.hex }}
+                />
+                <span>{c.name}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Brand / Artisan Studio Filter */}
-      <div className="pt-5 border-t border-stone-200">
-        <h3 className="font-semibold uppercase tracking-wider text-stone-700 mb-2.5">
-          Artisan Studio / Brand
-        </h3>
-        <select
-          value={brandParam}
-          onChange={(e) => updateFilter('brand', e.target.value)}
-          aria-label="Filter by brand"
-          className="w-full bg-white border border-stone-300 rounded px-2.5 py-2 text-xs text-[#1C1917]"
-        >
-          <option value="all">All Studios & Guilds</option>
-          {facets.brands.map((b) => (
-            <option key={b} value={b}>
-              {b}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Brand Filter */}
+      {facets.brands.length > 1 && (
+        <div className="pt-5 border-t border-stone-200">
+          <h3 className="font-semibold uppercase tracking-wider text-stone-700 mb-2.5">
+            Brand
+          </h3>
+          <select
+            value={brandParam}
+            onChange={(e) => updateFilter('brand', e.target.value)}
+            aria-label="Filter by brand"
+            className="w-full bg-white border border-stone-300 rounded px-2.5 py-2 text-xs text-[#1C1917]"
+          >
+            <option value="all">All Brands</option>
+            {facets.brands.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
     </div>
   );
 
@@ -534,16 +540,10 @@ export default function CatalogPage({ mode = 'shop' }) {
         }
       />
 
-      {/* Page Header / Hero Banner */}
-      <div className="relative bg-[#F3EDE2] border-b border-stone-200 overflow-hidden">
-        {bannerImage && (
-          <div className="absolute inset-0 opacity-15 pointer-events-none">
-            <img src={bannerImage} alt="" className="w-full h-full object-cover" />
-          </div>
-        )}
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-          {/* Breadcrumbs */}
-          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-stone-500 mb-4">
+      {/* Slim, Clean Page Header */}
+      <div className="bg-[#FAF7F2] border-b border-stone-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-stone-500 mb-2">
             <Link to="/" className="hover:text-[#1C1917]">
               Home
             </Link>
@@ -559,31 +559,63 @@ export default function CatalogPage({ mode = 'shop' }) {
             )}
           </nav>
 
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-[#B85338]">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>{pageEyebrow}</span>
-          </span>
-          <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold text-[#1C1917] mt-1.5">
-            {pageTitle}
-          </h1>
-          <p className="text-sm sm:text-base text-stone-600 max-w-2xl mt-2.5 leading-relaxed">
-            {pageDesc}
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-semibold text-[#1C1917]">
+              {pageTitle}
+            </h1>
+
+            {/* Quick Regional Origin Filter Pills */}
+            {facets.regions.length > 0 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                <button
+                  type="button"
+                  onClick={() => updateFilter('region', '')}
+                  className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                    !regionParam
+                      ? 'bg-[#1C1917] text-white font-semibold'
+                      : 'bg-white text-stone-600 border border-stone-200 hover:border-stone-400'
+                  }`}
+                >
+                  All Regions
+                </button>
+                {facets.regions.map((reg) => {
+                  const keyword = reg.split(' ')[0];
+                  const isSelected =
+                    regionParam.toLowerCase() === reg.toLowerCase() ||
+                    regionParam.toLowerCase() === keyword.toLowerCase();
+                  return (
+                    <button
+                      key={reg}
+                      type="button"
+                      onClick={() => updateFilter('region', isSelected ? '' : keyword)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#B85338] text-white font-semibold'
+                          : 'bg-white text-stone-600 border border-stone-200 hover:border-stone-400'
+                      }`}
+                    >
+                      {reg}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Main Catalog Layout */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
         {/* Toolbar: Mobile Filter Trigger, Product Count, Sort & Column Switcher */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-stone-200">
+        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-stone-200/80">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setIsMobileFilterOpen(true)}
-              className="lg:hidden inline-flex items-center gap-2 px-3.5 py-2 bg-white border border-stone-300 rounded text-xs font-semibold text-[#1C1917] hover:border-[#B85338] cursor-pointer"
+              className="lg:hidden inline-flex items-center gap-2 px-3.5 py-2 bg-white border border-stone-300 rounded-lg text-xs font-semibold text-[#1C1917] hover:border-[#B85338] cursor-pointer"
             >
               <SlidersHorizontal className="w-4 h-4 text-[#B85338]" />
-              <span>Filters</span>
+              <span>Filter</span>
               {activeChips.length > 0 && (
                 <span className="px-1.5 py-0.2 bg-[#B85338] text-white rounded-full text-[10px]">
                   {activeChips.length}
@@ -591,33 +623,33 @@ export default function CatalogPage({ mode = 'shop' }) {
               )}
             </button>
 
-            <p className="text-xs sm:text-sm text-stone-600">
-              Showing <strong className="text-[#1C1917]">{visibleProducts.length}</strong> of{' '}
-              <strong className="text-[#1C1917]">{filteredProducts.length}</strong> curated pieces
+            <p className="text-xs text-stone-500">
+              <strong className="text-[#1C1917]">{filteredProducts.length}</strong>{' '}
+              {filteredProducts.length === 1 ? 'item' : 'items'}
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 text-xs">
               <label htmlFor="catalog-sort-select" className="text-stone-500 hidden sm:inline">
-                Sort by:
+                Sort:
               </label>
               <select
                 id="catalog-sort-select"
                 value={sortParam}
                 onChange={(e) => updateFilter('sort', e.target.value)}
-                className="bg-white border border-stone-300 rounded px-3 py-2 text-xs font-medium text-[#1C1917] focus:outline-none focus:border-[#B85338] cursor-pointer"
+                className="bg-white border border-stone-300 rounded-lg px-3 py-1.5 text-xs font-medium text-[#1C1917] focus:outline-none focus:border-[#B85338] cursor-pointer"
               >
-                <option value="featured">Featured Curation</option>
-                <option value="newest">Newest Arrivals</option>
-                <option value="popular">Highest Rated & Popular</option>
+                <option value="featured">Featured</option>
+                <option value="newest">Newest</option>
+                <option value="popular">Top Rated</option>
                 <option value="price-asc">Price: Low to High</option>
                 <option value="price-desc">Price: High to Low</option>
               </select>
             </div>
 
             {/* Desktop Grid Layout Switcher */}
-            <div className="hidden xl:flex items-center border border-stone-300 rounded bg-white p-0.5">
+            <div className="hidden xl:flex items-center border border-stone-300 rounded-lg bg-white p-0.5">
               <button
                 type="button"
                 onClick={() => setGridCols(2)}

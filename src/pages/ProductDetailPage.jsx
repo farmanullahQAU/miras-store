@@ -10,11 +10,14 @@ import {
   RotateCcw,
   ShieldCheck,
   ZoomIn,
+  ZoomOut,
+  Maximize2,
   X,
   Plus,
   Minus,
   CheckCircle2,
   AlertCircle,
+  ChevronLeft,
   ChevronRight,
   ChevronDown,
   MapPin,
@@ -51,6 +54,11 @@ export default function ProductDetailPage() {
 
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [isZoomOpen, setIsZoomOpen] = useState(false);
+  const [isHoverZooming, setIsHoverZooming] = useState(false);
+  const [hoverZoomScale, setHoverZoomScale] = useState(2.5); // 2.5x or 3.5x
+  const [zoomCoords, setZoomCoords] = useState({ x: 50, y: 50, px: 0, py: 0, width: 1, height: 1 });
+  const [lightboxZoom, setLightboxZoom] = useState(1); // 1 | 2 | 3
+  const [lightboxPan, setLightboxPan] = useState({ x: 50, y: 50 });
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [sizeUnit, setSizeUnit] = useState('in'); // 'in' | 'cm'
   const [selectedColor, setSelectedColor] = useState('');
@@ -64,6 +72,7 @@ export default function ProductDetailPage() {
 
   const reviewsSectionRef = useRef(null);
   const purchaseBoxRef = useRef(null);
+  const mainImageContainerRef = useRef(null);
   const trackedProductIdRef = useRef(null);
 
   // Review form state
@@ -82,6 +91,8 @@ export default function ProductDetailPage() {
     if (product && trackedProductIdRef.current !== product.id) {
       trackedProductIdRef.current = product.id;
       setActiveImageIdx(0);
+      setIsHoverZooming(false);
+      setLightboxZoom(1);
       setSelectedColor(product.variants?.colors?.[0]?.name || '');
       setSelectedSize(product.variants?.sizes?.[0] || '');
       setQuantity(1);
@@ -91,6 +102,26 @@ export default function ProductDetailPage() {
       recordProductView(product.id);
     }
   }, [product, recordProductView]);
+
+  // Keyboard navigation in Fullscreen Lightbox
+  useEffect(() => {
+    if (!isZoomOpen || !product) return;
+    const totalImgs = product.images?.length || 1;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsZoomOpen(false);
+        setLightboxZoom(1);
+      } else if (e.key === 'ArrowRight') {
+        setActiveImageIdx((prev) => (prev + 1) % totalImgs);
+        setLightboxZoom(1);
+      } else if (e.key === 'ArrowLeft') {
+        setActiveImageIdx((prev) => (prev - 1 + totalImgs) % totalImgs);
+        setLightboxZoom(1);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isZoomOpen, product]);
 
   // Show sticky bottom purchase bar when user scrolls past the main purchase box
   useEffect(() => {
@@ -293,45 +324,120 @@ export default function ProductDetailPage() {
       {/* Main Product Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
-          {/* Left Column: Image Gallery (7 cols) */}
-          <div className="lg:col-span-7 space-y-4 lg:sticky lg:top-24">
-            <div className="relative aspect-4/5 sm:aspect-square bg-[#F3EDE2] rounded-xl overflow-hidden border border-stone-200 group">
+          {/* Left Column: Clean Interactive Hover Zoom & Multi-Angle Gallery (7 cols) */}
+          <div className="lg:col-span-7 space-y-3 lg:sticky lg:top-24">
+            <div
+              ref={mainImageContainerRef}
+              onMouseEnter={() => setIsHoverZooming(true)}
+              onMouseLeave={() => setIsHoverZooming(false)}
+              onMouseMove={(e) => {
+                if (!mainImageContainerRef.current) return;
+                const rect = mainImageContainerRef.current.getBoundingClientRect();
+                const rawX = e.clientX - rect.left;
+                const rawY = e.clientY - rect.top;
+                const xPct = Math.max(0, Math.min(100, (rawX / rect.width) * 100));
+                const yPct = Math.max(0, Math.min(100, (rawY / rect.height) * 100));
+                setZoomCoords({
+                  x: xPct,
+                  y: yPct,
+                  px: rawX,
+                  py: rawY,
+                  width: rect.width,
+                  height: rect.height,
+                });
+              }}
+              onClick={() => {
+                setLightboxZoom(2);
+                setLightboxPan({ x: zoomCoords.x || 50, y: zoomCoords.y || 50 });
+                setIsZoomOpen(true);
+              }}
+              className="relative aspect-4/5 sm:aspect-square bg-[#F3EDE2] rounded-xl overflow-hidden border border-stone-200/80 group cursor-zoom-in select-none"
+            >
+              {/* Main Product Image (Smoothly magnifies exact area under cursor on hover) */}
               <img
                 src={product.images?.[activeImageIdx] || product.images?.[0]}
                 alt={`${product.name} — view ${activeImageIdx + 1}`}
-                className="w-full h-full object-cover"
+                style={{
+                  transformOrigin: `${zoomCoords.x}% ${zoomCoords.y}%`,
+                  transform: isHoverZooming ? `scale(${hoverZoomScale})` : 'scale(1)',
+                }}
+                className="w-full h-full object-cover transition-transform duration-150 ease-out pointer-events-none"
               />
 
-              {hasDiscount && (
-                <span className="absolute top-4 left-4 px-3 py-1 rounded-md bg-[#6B2737] text-white text-xs font-semibold uppercase tracking-wider shadow-xs">
-                  Save {discountPercent}%
-                </span>
+              {/* Subtle Optical Loupe Ring Following Cursor */}
+              {isHoverZooming && (
+                <div
+                  style={{
+                    left: `${zoomCoords.px}px`,
+                    top: `${zoomCoords.py}px`,
+                  }}
+                  className="hidden sm:flex pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full border border-white/80 shadow-[0_0_0_1px_rgba(28,25,23,0.2)] items-center justify-center"
+                >
+                  <div className="w-1.5 h-1.5 rounded-full bg-white shadow-xs" />
+                </div>
               )}
 
+              {/* Top-Left Discount Badge */}
+              {hasDiscount && (
+                <div className="absolute top-4 left-4 pointer-events-none">
+                  <span className="px-3 py-1 rounded bg-[#6B2737] text-white text-[11px] font-semibold uppercase tracking-widest">
+                    -{discountPercent}%
+                  </span>
+                </div>
+              )}
+
+              {/* Top-Right Subtle Magnification Toggle (2.5x / 3.5x) */}
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="hidden sm:inline-flex absolute top-4 right-4 items-center bg-white/90 backdrop-blur-xs rounded-lg p-0.5 border border-stone-200/80 text-[11px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                {[2.5, 3.5].map((scaleVal) => (
+                  <button
+                    key={scaleVal}
+                    type="button"
+                    onClick={() => setHoverZoomScale(scaleVal)}
+                    className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
+                      hoverZoomScale === scaleVal
+                        ? 'bg-[#1C1917] text-white'
+                        : 'text-stone-600 hover:text-[#1C1917]'
+                    }`}
+                    title={`Set hover magnification to ${scaleVal}x`}
+                  >
+                    {scaleVal}×
+                  </button>
+                ))}
+              </div>
+
+              {/* Bottom-Right Fullscreen Zoom Button */}
               <button
                 type="button"
-                onClick={() => setIsZoomOpen(true)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxZoom(1);
+                  setIsZoomOpen(true);
+                }}
                 aria-label="Enlarge product image"
-                className="absolute bottom-4 right-4 px-3.5 py-2 rounded-lg bg-white/95 hover:bg-[#1C1917] text-[#1C1917] hover:text-white text-xs font-medium inline-flex items-center gap-1.5 shadow-md transition-colors cursor-pointer"
+                className="absolute bottom-4 right-4 w-9 h-9 rounded-full bg-white/90 hover:bg-[#1C1917] text-[#1C1917] hover:text-white flex items-center justify-center shadow-sm transition-colors cursor-pointer"
+                title="Fullscreen zoom"
               >
-                <ZoomIn className="w-4 h-4" />
-                <span>Enlarge View</span>
+                <Maximize2 className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Thumbnail Strip */}
+            {/* Clean Thumbnail Strip */}
             {product.images?.length > 1 && (
-              <div className="flex gap-3 overflow-x-auto pb-2">
+              <div className="flex items-center gap-3 overflow-x-auto pb-1">
                 {product.images.map((imgUrl, idx) => (
                   <button
                     key={imgUrl}
                     type="button"
                     onClick={() => setActiveImageIdx(idx)}
+                    onMouseEnter={() => setActiveImageIdx(idx)}
                     aria-label={`View image ${idx + 1}`}
-                    className={`w-20 h-24 rounded-lg overflow-hidden border-2 shrink-0 transition-all cursor-pointer ${
+                    className={`w-18 h-22 rounded-lg overflow-hidden border-2 shrink-0 transition-all cursor-pointer ${
                       activeImageIdx === idx
-                        ? 'border-[#B85338] shadow-xs'
-                        : 'border-stone-200 opacity-70 hover:opacity-100'
+                        ? 'border-[#1C1917] opacity-100'
+                        : 'border-transparent opacity-60 hover:opacity-100'
                     }`}
                   >
                     <img src={imgUrl} alt="" className="w-full h-full object-cover" />
@@ -341,35 +447,55 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          {/* Right Column: Clean, Unambiguous Product Purchase & Details Panel (5 cols) */}
+          {/* Right Column: Clean Luxury Purchase & Details Panel (5 cols) */}
           <div className="lg:col-span-5 space-y-6">
-            {/* 1. Header: Category, Cultural Origin, Title, Real Rating & Real Views */}
-            <div className="space-y-3 pb-5 border-b border-stone-200">
-              <div className="flex flex-wrap items-center justify-between gap-2">
+            {/* 1. Header: Origin, Title, Price & Rating */}
+            <div className="space-y-3 pb-5 border-b border-stone-200/80">
+              <div className="flex items-center justify-between gap-2 text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#B85338]">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#B85338]">
                     {product.category}
                   </span>
                   {culturalOrigin && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#4A5D4E]/10 text-[#4A5D4E] text-[11px] font-semibold">
-                      <MapPin className="w-3 h-3" />
-                      {culturalOrigin}
-                    </span>
+                    <>
+                      <span className="text-stone-300">·</span>
+                      <span className="inline-flex items-center gap-1 text-stone-600 font-medium">
+                        <MapPin className="w-3 h-3 text-[#B85338]" />
+                        {culturalOrigin}
+                      </span>
+                    </>
                   )}
                 </div>
-                <span className="text-[11px] text-stone-400 font-mono">SKU: {product.sku}</span>
+                <span className="text-[11px] text-stone-400 font-mono">{product.sku}</span>
               </div>
 
-              <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-semibold text-[#1C1917] leading-snug">
+              <h1 className="font-serif text-2xl sm:text-3xl font-semibold text-[#1C1917] leading-snug">
                 {product.name}
               </h1>
 
-              {/* Real Rating, Verified Review Anchor Link, & Real Product Views */}
-              <div className="flex flex-wrap items-center gap-4 pt-1 text-xs">
+              {/* Price Row */}
+              <div className="flex items-baseline gap-3 pt-1">
+                <span className="text-2xl font-semibold text-[#1C1917]">
+                  {formatPrice(product.price)}
+                </span>
+                {hasDiscount && (
+                  <>
+                    <span className="text-sm text-stone-400 line-through">
+                      {formatPrice(product.originalPrice)}
+                    </span>
+                    <span className="text-[11px] font-semibold text-[#6B2737] bg-[#6B2737]/10 px-2 py-0.5 rounded">
+                      Save {discountPercent}%
+                    </span>
+                  </>
+                )}
+              </div>
+
+              {/* Subtle Rating, Views & Stock Row */}
+              <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-stone-500">
                 <button
                   type="button"
                   onClick={scrollToReviews}
-                  className="inline-flex items-center gap-1.5 text-[#1C1917] hover:text-[#B85338] transition-colors cursor-pointer group"
+                  className="inline-flex items-center gap-1.5 text-[#1C1917] hover:text-[#B85338] transition-colors cursor-pointer"
                 >
                   <div className="flex items-center text-[#C59B5F]">
                     {Array.from({ length: 5 }).map((_, i) => (
@@ -381,28 +507,29 @@ export default function ProductDetailPage() {
                       />
                     ))}
                   </div>
-                  <span className="font-bold">{realRating.toFixed(1)}</span>
-                  <span className="text-stone-500 group-hover:text-[#B85338] underline">
-                    ({realReviewCount} {realReviewCount === 1 ? 'review' : 'reviews'})
-                  </span>
+                  {realReviewCount > 0 ? (
+                    <span className="underline underline-offset-2">
+                      {realRating.toFixed(1)} ({realReviewCount}{' '}
+                      {realReviewCount === 1 ? 'review' : 'reviews'})
+                    </span>
+                  ) : (
+                    <span className="underline underline-offset-2 text-stone-500">
+                      Write a review
+                    </span>
+                  )}
                 </button>
 
-                <span className="text-stone-300">|</span>
+                <span className="text-stone-300">·</span>
 
-                <span
-                  className="inline-flex items-center gap-1.5 text-stone-600 font-medium"
-                  title="Total real product page views"
-                >
-                  <Eye className="w-3.5 h-3.5 text-[#B85338]" />
-                  <span>
-                    {realViewCount.toLocaleString()} {realViewCount === 1 ? 'view' : 'views'}
-                  </span>
+                <span className="inline-flex items-center gap-1 text-stone-500">
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>{realViewCount.toLocaleString()} views</span>
                 </span>
 
-                <span className="text-stone-300">|</span>
+                <span className="text-stone-300">·</span>
 
                 <span
-                  className={`inline-flex items-center gap-1 font-semibold ${
+                  className={`font-medium ${
                     isOutOfStock
                       ? 'text-red-600'
                       : product.stock <= 6
@@ -410,57 +537,26 @@ export default function ProductDetailPage() {
                       : 'text-[#4A5D4E]'
                   }`}
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
                   {isOutOfStock
                     ? 'Out of Stock'
                     : product.stock <= 6
-                    ? `Low Stock (${product.stock} left)`
-                    : `In Stock (${product.stock} available)`}
+                    ? `Only ${product.stock} left`
+                    : 'In Stock'}
                 </span>
               </div>
             </div>
 
-            {/* 2. Clear Price & Value Block */}
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-baseline gap-3">
-                <span className="text-3xl font-bold text-[#1C1917]">
-                  {formatPrice(product.price)}
-                </span>
-                {hasDiscount && (
-                  <>
-                    <span className="text-base text-stone-400 line-through">
-                      {formatPrice(product.originalPrice)}
-                    </span>
-                    <span className="text-xs font-semibold text-[#6B2737] bg-[#6B2737]/10 px-2.5 py-1 rounded-md">
-                      Save {formatPrice(product.originalPrice - product.price)} ({discountPercent}% OFF)
-                    </span>
-                  </>
-                )}
-              </div>
-              <p className="text-xs text-stone-500">
-                Inclusive of all taxes · Authenticity guaranteed from{' '}
-                <strong className="text-stone-700">{culturalOrigin || 'Pakistan'}</strong>
-              </p>
-              {product.shortDescription && (
-                <p className="text-sm text-stone-600 leading-relaxed pt-2">
-                  {product.shortDescription}
-                </p>
-              )}
-            </div>
-
-            {/* 3. Unambiguous Variant Selectors (Color & Size) */}
-            <div className="space-y-5 pt-2">
+            {/* 2. Variant Selectors (Color & Size) */}
+            <div className="space-y-4">
               {product.variants?.colors?.length > 0 && (
-                <div className="space-y-2.5">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold uppercase tracking-wider text-stone-500">
-                      1. Select Color / Finish:
+                      Color
                     </span>
-                    <span className="font-semibold text-[#1C1917]">
-                      {selectedColor || 'Choose option'}
-                    </span>
+                    <span className="font-medium text-[#1C1917]">{selectedColor}</span>
                   </div>
-                  <div className="flex flex-wrap gap-2.5">
+                  <div className="flex flex-wrap gap-2">
                     {product.variants.colors.map((c) => {
                       const isSelected = selectedColor === c.name;
                       return (
@@ -471,14 +567,14 @@ export default function ProductDetailPage() {
                             setSelectedColor(c.name);
                             setValidationError('');
                           }}
-                          className={`inline-flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg border text-xs font-medium cursor-pointer transition-all ${
+                          className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border text-xs font-medium cursor-pointer transition-all ${
                             isSelected
-                              ? 'border-[#1C1917] bg-[#1C1917] text-white shadow-xs'
+                              ? 'border-[#1C1917] bg-[#1C1917] text-white'
                               : 'border-stone-300 bg-white text-stone-700 hover:border-stone-400'
                           }`}
                         >
                           <span
-                            className="w-4 h-4 rounded-full border border-white/40 shadow-2xs shrink-0"
+                            className="w-3.5 h-3.5 rounded-full border border-white/40 shrink-0"
                             style={{ backgroundColor: c.hex }}
                           />
                           <span>{c.name}</span>
@@ -490,21 +586,21 @@ export default function ProductDetailPage() {
               )}
 
               {product.variants?.sizes?.length > 0 && (
-                <div className="space-y-2.5">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold uppercase tracking-wider text-stone-500">
-                      {product.variants?.colors?.length > 0 ? '2. ' : '1. '}Select Size / Edition:
+                      Size / Option
                     </span>
                     <button
                       type="button"
                       onClick={() => setIsSizeGuideOpen(true)}
-                      className="inline-flex items-center gap-1 text-[#B85338] hover:underline font-semibold cursor-pointer"
+                      className="inline-flex items-center gap-1 text-stone-600 hover:text-[#1C1917] underline underline-offset-2 font-medium cursor-pointer"
                     >
                       <Ruler className="w-3.5 h-3.5" />
-                      <span>Size & Measurement Guide</span>
+                      <span>Size Guide</span>
                     </button>
                   </div>
-                  <div className="flex flex-wrap gap-2.5">
+                  <div className="flex flex-wrap gap-2">
                     {product.variants.sizes.map((sz) => {
                       const isSelected = selectedSize === sz;
                       return (
@@ -515,9 +611,9 @@ export default function ProductDetailPage() {
                             setSelectedSize(sz);
                             setValidationError('');
                           }}
-                          className={`px-4 py-2.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all ${
+                          className={`px-4 py-2 rounded-lg border text-xs font-semibold cursor-pointer transition-all ${
                             isSelected
-                              ? 'border-[#1C1917] bg-[#1C1917] text-white shadow-xs'
+                              ? 'border-[#1C1917] bg-[#1C1917] text-white'
                               : 'border-stone-300 bg-white text-stone-700 hover:border-stone-400'
                           }`}
                         >
@@ -529,7 +625,6 @@ export default function ProductDetailPage() {
                 </div>
               )}
 
-              {/* Validation Error Banner */}
               {validationError && (
                 <div
                   role="alert"
@@ -541,15 +636,12 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            {/* 4. Purchase Actions Box */}
-            <div
-              ref={purchaseBoxRef}
-              className="p-5 rounded-xl bg-white border border-stone-200 shadow-2xs space-y-3.5"
-            >
+            {/* 3. Clean Purchase Actions */}
+            <div ref={purchaseBoxRef} className="space-y-3 pt-1">
               <div className="flex items-center gap-3">
                 {/* Quantity Selector */}
                 <div
-                  className="inline-flex items-center border border-stone-300 rounded-lg bg-[#FAF7F2]"
+                  className="inline-flex items-center border border-stone-300 rounded-lg bg-white"
                   aria-label="Quantity selector"
                 >
                   <button
@@ -559,9 +651,9 @@ export default function ProductDetailPage() {
                     aria-label="Decrease quantity"
                     className="p-3.5 text-stone-600 hover:text-[#1C1917] disabled:opacity-40 cursor-pointer"
                   >
-                    <Minus className="w-4 h-4" />
+                    <Minus className="w-3.5 h-3.5" />
                   </button>
-                  <span className="px-4 text-sm font-bold text-[#1C1917] min-w-[2.5rem] text-center">
+                  <span className="px-3.5 text-sm font-semibold text-[#1C1917] min-w-[2.25rem] text-center">
                     {quantity}
                   </span>
                   <button
@@ -571,7 +663,7 @@ export default function ProductDetailPage() {
                     aria-label="Increase quantity"
                     className="p-3.5 text-stone-600 hover:text-[#1C1917] disabled:opacity-40 cursor-pointer"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
@@ -580,10 +672,10 @@ export default function ProductDetailPage() {
                   type="button"
                   onClick={handleAddToCart}
                   disabled={isOutOfStock}
-                  className="flex-1 py-3.5 px-6 bg-[#1C1917] hover:bg-[#B85338] disabled:bg-stone-300 text-white text-xs sm:text-sm font-semibold uppercase tracking-wider rounded-lg transition-colors inline-flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                  className="flex-1 py-3.5 px-6 bg-[#1C1917] hover:bg-[#B85338] disabled:bg-stone-300 text-white text-xs font-semibold uppercase tracking-[0.16em] rounded-lg transition-colors inline-flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <ShoppingBag className="w-4 h-4" />
-                  <span>{isOutOfStock ? 'Out of Stock' : 'Add to Bag'}</span>
+                  <span>{isOutOfStock ? 'Sold Out' : 'Add to Bag'}</span>
                 </button>
               </div>
 
@@ -593,9 +685,9 @@ export default function ProductDetailPage() {
                   type="button"
                   onClick={handleBuyNow}
                   disabled={isOutOfStock}
-                  className="col-span-8 py-3 px-4 bg-[#B85338] hover:bg-[#983F27] disabled:bg-stone-200 text-white text-xs font-semibold uppercase tracking-wider rounded-lg transition-colors inline-flex items-center justify-center gap-2 cursor-pointer"
+                  className="col-span-8 py-3 px-4 bg-[#B85338] hover:bg-[#983F27] disabled:bg-stone-200 text-white text-xs font-semibold uppercase tracking-[0.14em] rounded-lg transition-colors inline-flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <Zap className="w-4 h-4" />
+                  <Zap className="w-3.5 h-3.5" />
                   <span>Buy It Now</span>
                 </button>
 
@@ -624,52 +716,52 @@ export default function ProductDetailPage() {
                 </button>
               </div>
 
-              {/* WhatsApp Concierge Inquiry */}
+              {/* Subtle WhatsApp Inquiry Link */}
               <a
                 href={`https://wa.me/${(brandConfig.whatsappNumber || brandConfig.contactPhone || '923001234567').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
                   `Assalam-o-Alaikum ${brandConfig.brandName}! I would like to inquire about "${product.name}" (SKU: ${product.sku}, Price: ${formatPrice(product.price)}).`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-2.5 px-4 rounded-lg border border-emerald-700/25 bg-emerald-50/60 hover:bg-emerald-100/70 text-emerald-900 text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
+                className="w-full py-2.5 px-4 rounded-lg border border-stone-200 bg-white hover:border-[#1C1917] text-stone-700 text-xs font-medium flex items-center justify-center gap-2 transition-colors"
               >
                 <MessageCircle className="w-4 h-4 text-emerald-700" />
-                <span>Order or Ask via WhatsApp Concierge</span>
+                <span>Order or Ask via WhatsApp</span>
               </a>
             </div>
 
-            {/* 5. Concise Delivery & Returns Summary Strip */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div className="p-3.5 rounded-xl bg-[#F3EDE2]/80 border border-stone-200/90 flex items-start gap-2.5">
-                <Truck className="w-4 h-4 text-[#B85338] shrink-0 mt-0.5" />
+            {/* 4. Compact Delivery & Returns Strip */}
+            <div className="grid grid-cols-2 gap-3 text-xs pt-1">
+              <div className="p-3 rounded-lg bg-white border border-stone-200/80 flex items-center gap-2.5">
+                <Truck className="w-4 h-4 text-[#B85338] shrink-0" />
                 <div>
                   <p className="font-semibold text-[#1C1917]">Delivery: {estimatedWindow}</p>
-                  <p className="text-stone-600 mt-0.5">
-                    Free shipping over {formatPrice(brandConfig.shipping.freeShippingThreshold)}
+                  <p className="text-[11px] text-stone-500">
+                    Free over {formatPrice(brandConfig.shipping.freeShippingThreshold)}
                   </p>
                 </div>
               </div>
-              <div className="p-3.5 rounded-xl bg-[#F3EDE2]/80 border border-stone-200/90 flex items-start gap-2.5">
-                <RotateCcw className="w-4 h-4 text-[#4A5D4E] shrink-0 mt-0.5" />
+              <div className="p-3 rounded-lg bg-white border border-stone-200/80 flex items-center gap-2.5">
+                <RotateCcw className="w-4 h-4 text-[#4A5D4E] shrink-0" />
                 <div>
-                  <p className="font-semibold text-[#1C1917]">14-Day Easy Returns</p>
-                  <p className="text-stone-600 mt-0.5">COD & Online Transfer available</p>
+                  <p className="font-semibold text-[#1C1917]">14-Day Exchange</p>
+                  <p className="text-[11px] text-stone-500">Cash on Delivery available</p>
                 </div>
               </div>
             </div>
 
-            {/* 6. Clean Collapsible Accordions (Khaadi / Shopify Standard Right-Column Layout) */}
+            {/* 5. Clean Collapsible Accordions */}
             <div className="divide-y divide-stone-200 border-y border-stone-200">
-              {/* Story & Craftsmanship Accordion */}
+              {/* Product Details Accordion */}
               <div>
                 <button
                   type="button"
                   onClick={() =>
                     setOpenAccordion((prev) => (prev === 'story' ? '' : 'story'))
                   }
-                  className="w-full py-4 flex items-center justify-between text-left text-sm font-semibold text-[#1C1917] hover:text-[#B85338] transition-colors cursor-pointer"
+                  className="w-full py-3.5 flex items-center justify-between text-left text-xs uppercase tracking-[0.14em] font-semibold text-[#1C1917] hover:text-[#B85338] transition-colors cursor-pointer"
                 >
-                  <span>Story & Regional Craftsmanship</span>
+                  <span>Description</span>
                   <ChevronDown
                     className={`w-4 h-4 text-stone-500 transition-transform ${
                       openAccordion === 'story' ? 'rotate-180 text-[#B85338]' : ''
@@ -677,41 +769,25 @@ export default function ProductDetailPage() {
                   />
                 </button>
                 {openAccordion === 'story' && (
-                  <div className="pb-4 space-y-3 text-xs sm:text-sm text-stone-600 leading-relaxed">
-                    <p>{product.description}</p>
+                  <div className="pb-4 space-y-2.5 text-xs sm:text-sm text-stone-600 leading-relaxed">
+                    <p>{product.description || product.shortDescription}</p>
                     {product.craftsmanshipNote && (
-                      <div className="p-3 rounded-lg bg-[#FAF7F2] border border-stone-200 flex items-start gap-2.5 text-xs">
-                        <ShieldCheck className="w-4 h-4 text-[#6B2737] shrink-0 mt-0.5" />
-                        <span>{product.craftsmanshipNote}</span>
-                      </div>
-                    )}
-                    {product.tags?.length > 0 && (
-                      <div className="pt-1 flex flex-wrap gap-1.5">
-                        {product.tags.map((tag) => (
-                          <Link
-                            key={tag}
-                            to={`/search?q=${encodeURIComponent(tag)}`}
-                            className="px-2.5 py-1 rounded-full bg-[#FAF7F2] border border-stone-200 text-[11px] text-stone-600 hover:border-[#B85338]"
-                          >
-                            #{tag}
-                          </Link>
-                        ))}
-                      </div>
+                      <p className="text-xs text-stone-500 italic">{product.craftsmanshipNote}</p>
                     )}
                   </div>
                 )}
               </div>
 
-              {/* Specifications & Materials Accordion */}
+              {/* Specifications & Origin Accordion */}
               <div>
                 <button
                   type="button"
                   onClick={() =>
                     setOpenAccordion((prev) => (prev === 'specs' ? '' : 'specs'))
                   }
-                  className="w-full py-4 flex items-center justify-between text-left text-sm font-semibold text-[#1C1917] hover:text-[#B85338] transition-colors cursor-pointer"
+                  className="w-full py-3.5 flex items-center justify-between text-left text-xs uppercase tracking-[0.14em] font-semibold text-[#1C1917] hover:text-[#B85338] transition-colors cursor-pointer"
                 >
-                  <span>Specifications, Origin & Materials</span>
+                  <span>Specifications & Origin</span>
                   <ChevronDown
                     className={`w-4 h-4 text-stone-500 transition-transform ${
                       openAccordion === 'specs' ? 'rotate-180 text-[#B85338]' : ''
@@ -721,20 +797,28 @@ export default function ProductDetailPage() {
                 {openAccordion === 'specs' && (
                   <div className="pb-4">
                     <dl className="divide-y divide-stone-100 text-xs">
+                      {culturalOrigin && (
+                        <div className="py-2 grid grid-cols-3 gap-2">
+                          <dt className="font-semibold text-stone-700">Origin</dt>
+                          <dd className="col-span-2 text-stone-600">{culturalOrigin}</dd>
+                        </div>
+                      )}
                       {Object.entries(product.specifications || {}).map(([key, val]) => (
-                        <div key={key} className="py-2.5 grid grid-cols-3 gap-2">
+                        <div key={key} className="py-2 grid grid-cols-3 gap-2">
                           <dt className="font-semibold text-stone-700">{key}</dt>
                           <dd className="col-span-2 text-stone-600">{val}</dd>
                         </div>
                       ))}
-                      <div className="py-2.5 grid grid-cols-3 gap-2">
-                        <dt className="font-semibold text-stone-700">Materials</dt>
-                        <dd className="col-span-2 text-stone-600">
-                          {(product.variants?.materials || []).join(', ') || 'Artisan Grade'}
-                        </dd>
-                      </div>
-                      <div className="py-2.5 grid grid-cols-3 gap-2">
-                        <dt className="font-semibold text-stone-700">Catalog SKU</dt>
+                      {(product.variants?.materials || []).length > 0 && (
+                        <div className="py-2 grid grid-cols-3 gap-2">
+                          <dt className="font-semibold text-stone-700">Material / Type</dt>
+                          <dd className="col-span-2 text-stone-600">
+                            {product.variants.materials.join(', ')}
+                          </dd>
+                        </div>
+                      )}
+                      <div className="py-2 grid grid-cols-3 gap-2">
+                        <dt className="font-semibold text-stone-700">SKU</dt>
                         <dd className="col-span-2 text-stone-600">{product.sku}</dd>
                       </div>
                     </dl>
@@ -742,16 +826,16 @@ export default function ProductDetailPage() {
                 )}
               </div>
 
-              {/* Shipping & Care Policy Accordion */}
+              {/* Delivery & Returns Policy Accordion */}
               <div>
                 <button
                   type="button"
                   onClick={() =>
                     setOpenAccordion((prev) => (prev === 'shipping' ? '' : 'shipping'))
                   }
-                  className="w-full py-4 flex items-center justify-between text-left text-sm font-semibold text-[#1C1917] hover:text-[#B85338] transition-colors cursor-pointer"
+                  className="w-full py-3.5 flex items-center justify-between text-left text-xs uppercase tracking-[0.14em] font-semibold text-[#1C1917] hover:text-[#B85338] transition-colors cursor-pointer"
                 >
-                  <span>Nationwide Dispatch & Return Policy</span>
+                  <span>Delivery & Returns</span>
                   <ChevronDown
                     className={`w-4 h-4 text-stone-500 transition-transform ${
                       openAccordion === 'shipping' ? 'rotate-180 text-[#B85338]' : ''
@@ -759,10 +843,7 @@ export default function ProductDetailPage() {
                   />
                 </button>
                 {openAccordion === 'shipping' && (
-                  <div className="pb-4 space-y-2.5 text-xs text-stone-600 leading-relaxed">
-                    <p>
-                      Every piece is inspected by our quality control team before being packed in protective materials. Fragile ceramics and glass vessels are double-boxed with custom cushioning.
-                    </p>
+                  <div className="pb-4 space-y-2 text-xs text-stone-600 leading-relaxed">
                     <ul className="list-disc pl-4 space-y-1">
                       {brandConfig.shipping.methods.map((m) => (
                         <li key={m.id}>
@@ -778,55 +859,51 @@ export default function ProductDetailPage() {
         </div>
 
         {/* =====================================================================
-            DEDICATED CUSTOMER REVIEWS & RATINGS SECTION (ALWAYS VISIBLE BELOW)
+            CUSTOMER REVIEWS & RATINGS SECTION
            ===================================================================== */}
         <section
           ref={reviewsSectionRef}
           id="customer-reviews"
           className="mt-16 pt-12 border-t border-stone-200 scroll-mt-24"
         >
-          <div className="bg-white rounded-2xl border border-stone-200 p-6 sm:p-10 shadow-2xs">
+          <div className="bg-white rounded-2xl border border-stone-200/80 p-6 sm:p-10">
             {/* Section Header & Rating Summary Breakdown */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-10 border-b border-stone-200 items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-8 border-b border-stone-200 items-center">
               {/* Left: Overall Score */}
-              <div className="lg:col-span-4 flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-start gap-4">
+              <div className="lg:col-span-5 flex flex-col sm:flex-row items-start sm:items-center gap-5">
                 <div>
-                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#B85338]">
-                    Verified Collector Feedback
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#B85338]">
+                    Customer Feedback
                   </span>
                   <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-[#1C1917] mt-1">
-                    Customer Reviews
+                    Reviews ({realReviewCount})
                   </h2>
                 </div>
 
-                <div className="flex items-center gap-4 bg-[#FAF7F2] px-5 py-4 rounded-xl border border-stone-200 w-full sm:w-auto">
-                  <div className="text-4xl font-serif font-bold text-[#1C1917]">
+                <div className="flex items-center gap-4 bg-[#FAF7F2] px-5 py-3.5 rounded-xl border border-stone-200">
+                  <div className="text-3xl font-serif font-bold text-[#1C1917]">
                     {realRating.toFixed(1)}
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     <div className="flex items-center text-[#C59B5F]">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <Star
                           key={i}
-                          className={`w-4 h-4 ${
+                          className={`w-3.5 h-3.5 ${
                             i < Math.round(realRating) ? 'fill-current' : 'text-stone-300'
                           }`}
                         />
                       ))}
                     </div>
-                    <p className="text-xs text-stone-600 font-medium">
-                      Based on <strong>{realReviewCount}</strong>{' '}
-                      {realReviewCount === 1 ? 'verified review' : 'verified reviews'}
+                    <p className="text-[11px] text-stone-500">
+                      {realReviewCount} {realReviewCount === 1 ? 'review' : 'reviews'}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Middle: Interactive Click-to-Filter 5-Star to 1-Star Distribution Bars */}
-              <div className="lg:col-span-5 space-y-1.5">
-                <p className="text-[11px] text-stone-500 mb-1">
-                  Click a star rating below to filter customer reviews:
-                </p>
+              {/* Right: Interactive Click-to-Filter 5-Star to 1-Star Distribution Bars */}
+              <div className="lg:col-span-7 space-y-1">
                 {ratingBreakdown.map((item) => {
                   const isActiveStar = reviewFilterStar === item.star;
                   return (
@@ -842,32 +919,21 @@ export default function ProductDetailPage() {
                           : 'hover:bg-stone-50'
                       }`}
                     >
-                      <span className="w-12 font-semibold text-stone-700 inline-flex items-center gap-1">
+                      <span className="w-10 font-semibold text-stone-700 inline-flex items-center gap-1">
                         {item.star} <Star className="w-3 h-3 fill-[#C59B5F] text-[#C59B5F]" />
                       </span>
-                      <div className="flex-1 h-2.5 rounded-full bg-stone-100 overflow-hidden border border-stone-200/60">
+                      <div className="flex-1 h-2 rounded-full bg-stone-100 overflow-hidden">
                         <div
                           className="h-full bg-[#C59B5F] rounded-full transition-all duration-500"
                           style={{ width: `${item.percent}%` }}
                         />
                       </div>
-                      <span className="w-10 text-right text-stone-500 font-mono">
+                      <span className="w-8 text-right text-stone-500 font-mono">
                         {item.count}
                       </span>
                     </button>
                   );
                 })}
-              </div>
-
-              {/* Right: Authenticity Badge */}
-              <div className="lg:col-span-3 bg-[#F3EDE2]/70 rounded-xl p-4 border border-stone-200/80 space-y-2 text-xs">
-                <div className="flex items-center gap-2 text-[#1C1917] font-semibold">
-                  <Award className="w-4 h-4 text-[#B85338]" />
-                  <span>100% Real Reviews</span>
-                </div>
-                <p className="text-stone-600 leading-relaxed">
-                  Every rating and review on {brandConfig.brandName} is dynamically calculated from actual customer submissions stored in Cloudflare D1.
-                </p>
               </div>
             </div>
 
@@ -1150,29 +1216,177 @@ export default function ProductDetailPage() {
         )}
       </div>
 
-      {/* Image Zoom Lightbox Modal */}
+      {/* Interactive Fullscreen Studio Zoom Lightbox Modal */}
       {isZoomOpen && (
         <div
           role="dialog"
           aria-modal="true"
           aria-label="Enlarged product image"
-          className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4"
-          onClick={() => setIsZoomOpen(false)}
+          className="fixed inset-0 z-50 bg-[#12100E]/95 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 select-none animate-in fade-in duration-150"
+          onClick={() => {
+            setIsZoomOpen(false);
+            setLightboxZoom(1);
+          }}
         >
-          <button
-            type="button"
-            onClick={() => setIsZoomOpen(false)}
-            aria-label="Close enlarged view"
-            className="fixed top-5 right-5 w-10 h-10 rounded-full bg-white text-[#1C1917] flex items-center justify-center cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
-          <img
-            src={product.images?.[activeImageIdx] || product.images?.[0]}
-            alt={product.name}
-            className="max-w-full max-h-[90vh] object-contain rounded shadow-2xl"
+          {/* Top Bar: Product Title, Zoom Level Controls & Close */}
+          <div
             onClick={(e) => e.stopPropagation()}
-          />
+            className="max-w-7xl w-full mx-auto flex flex-wrap items-center justify-between gap-3 z-20"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="px-2.5 py-1 rounded-md bg-[#B85338] text-white text-[11px] font-bold uppercase tracking-wider">
+                View {activeImageIdx + 1} / {product.images?.length || 1}
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-sm sm:text-base font-serif font-semibold text-white truncate">
+                  {product.name}
+                </h3>
+                <p className="text-[11px] text-stone-400 hidden sm:block">
+                  Click image to cycle magnification (1× → 2× → 3×) · Move cursor to pan across details
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Zoom Level Buttons */}
+              <div className="inline-flex items-center rounded-xl bg-white/10 border border-white/15 p-1 text-xs font-semibold text-white">
+                <button
+                  type="button"
+                  onClick={() => setLightboxZoom((z) => Math.max(1, z - 1))}
+                  disabled={lightboxZoom <= 1}
+                  aria-label="Zoom out"
+                  className="p-1.5 rounded-lg hover:bg-white/15 disabled:opacity-40 cursor-pointer"
+                >
+                  <ZoomOut className="w-4 h-4" />
+                </button>
+                {[1, 2, 3].map((lvl) => (
+                  <button
+                    key={lvl}
+                    type="button"
+                    onClick={() => setLightboxZoom(lvl)}
+                    className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+                      lightboxZoom === lvl
+                        ? 'bg-[#B85338] text-white'
+                        : 'text-stone-300 hover:text-white'
+                    }`}
+                  >
+                    {lvl}×
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setLightboxZoom((z) => Math.min(3, z + 1))}
+                  disabled={lightboxZoom >= 3}
+                  aria-label="Zoom in"
+                  className="p-1.5 rounded-lg hover:bg-white/15 disabled:opacity-40 cursor-pointer"
+                >
+                  <ZoomIn className="w-4 h-4" />
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsZoomOpen(false);
+                  setLightboxZoom(1);
+                }}
+                aria-label="Close enlarged view"
+                className="w-10 h-10 rounded-full bg-white/15 hover:bg-white text-white hover:text-[#1C1917] flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Center Interactive Panning Viewport */}
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              const rect = e.currentTarget.getBoundingClientRect();
+              const xPct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+              const yPct = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+              setLightboxPan({ x: xPct, y: yPct });
+              setLightboxZoom((prev) => (prev >= 3 ? 1 : prev + 1));
+            }}
+            onMouseMove={(e) => {
+              if (lightboxZoom <= 1) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const xPct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+              const yPct = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+              setLightboxPan({ x: xPct, y: yPct });
+            }}
+            className={`relative flex-1 my-4 max-w-6xl w-full mx-auto overflow-hidden rounded-2xl border border-white/15 bg-black/40 flex items-center justify-center ${
+              lightboxZoom > 1 ? 'cursor-zoom-out' : 'cursor-zoom-in'
+            }`}
+          >
+            {/* Previous / Next Image Arrows */}
+            {(product.images?.length || 0) > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveImageIdx(
+                      (prev) => (prev - 1 + product.images.length) % product.images.length
+                    );
+                    setLightboxZoom(1);
+                  }}
+                  aria-label="Previous image"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-black/60 hover:bg-[#B85338] text-white border border-white/20 flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveImageIdx((prev) => (prev + 1) % product.images.length);
+                    setLightboxZoom(1);
+                  }}
+                  aria-label="Next image"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 rounded-full bg-black/60 hover:bg-[#B85338] text-white border border-white/20 flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </>
+            )}
+
+            <img
+              src={product.images?.[activeImageIdx] || product.images?.[0]}
+              alt={product.name}
+              style={{
+                transformOrigin: `${lightboxPan.x}% ${lightboxPan.y}%`,
+                transform: `scale(${lightboxZoom})`,
+              }}
+              className="max-w-full max-h-[74vh] object-contain transition-transform duration-150 ease-out pointer-events-none"
+            />
+          </div>
+
+          {/* Bottom Filmstrip Thumbnails */}
+          {(product.images?.length || 0) > 1 && (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center justify-center gap-3 overflow-x-auto pb-1 z-20"
+            >
+              {product.images.map((imgUrl, idx) => (
+                <button
+                  key={imgUrl}
+                  type="button"
+                  onClick={() => {
+                    setActiveImageIdx(idx);
+                    setLightboxZoom(1);
+                  }}
+                  className={`w-16 h-20 rounded-lg overflow-hidden border-2 shrink-0 transition-all cursor-pointer ${
+                    activeImageIdx === idx
+                      ? 'border-[#B85338] scale-105 shadow-lg'
+                      : 'border-white/20 opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  <img src={imgUrl} alt="" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
