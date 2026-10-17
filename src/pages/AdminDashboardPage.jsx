@@ -26,6 +26,7 @@ import {
   X,
   Database,
   Star,
+  CheckCircle2,
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import SEOHead from '../components/common/SEOHead';
@@ -106,6 +107,8 @@ export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState('products');
   const [searchQuery, setSearchQuery] = useState('');
   const [stockFilter, setStockFilter] = useState('all'); // 'all' | 'low' | 'out'
+  const [orderSearchQuery, setOrderSearchQuery] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('All');
   const [copiedId, setCopiedId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [confirmClearModal, setConfirmClearModal] = useState(false);
@@ -1327,24 +1330,65 @@ export default function AdminDashboardPage() {
       {/* TAB 3: ORDERS MANAGEMENT */}
       {activeTab === 'orders' && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-[#E6DFD3]">
-            <div>
-              <h3 className="font-serif text-lg font-semibold text-[#1C1A17]">
-                Customer Orders ({orders.length})
-              </h3>
-              <p className="text-xs text-[#5C564F]">
-                Manage fulfillment status, assign courier tracking, or export orders for dispatch sheets.
-              </p>
+          <div className="bg-white p-4 rounded-2xl border border-[#E6DFD3] space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="font-serif text-lg font-semibold text-[#1C1A17]">
+                  Customer Orders ({orders.length})
+                </h3>
+                <p className="text-xs text-[#5C564F]">
+                  Manage fulfillment status, assign courier tracking, or export orders for dispatch sheets.
+                </p>
+              </div>
+              {orders.length > 0 && (
+                <button
+                  type="button"
+                  onClick={exportOrdersToCsv}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1C1A17] text-white text-xs font-semibold hover:bg-[#9E4733] transition-colors cursor-pointer self-start sm:self-auto"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  Download Orders CSV
+                </button>
+              )}
             </div>
+
             {orders.length > 0 && (
-              <button
-                type="button"
-                onClick={exportOrdersToCsv}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1C1A17] text-white text-xs font-semibold hover:bg-[#9E4733] transition-colors cursor-pointer self-start sm:self-auto"
-              >
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                Download Orders CSV
-              </button>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-3 border-t border-[#E6DFD3]">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="w-4 h-4 text-[#5C564F] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={orderSearchQuery}
+                    onChange={(e) => setOrderSearchQuery(e.target.value)}
+                    placeholder="Search by Order ID, customer name, phone, or city..."
+                    className="w-full pl-10 pr-4 py-2 rounded-xl border border-[#E6DFD3] text-xs"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {[
+                    'All',
+                    'Confirmed',
+                    'Processing',
+                    'Dispatched',
+                    'Delivered',
+                    'Cancelled',
+                  ].map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setOrderStatusFilter(st)}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
+                        orderStatusFilter === st
+                          ? 'bg-[#1C1A17] text-white'
+                          : 'bg-[#FBF9F5] text-[#5C564F] border border-[#E6DFD3] hover:text-[#1C1A17]'
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
 
@@ -1357,7 +1401,21 @@ export default function AdminDashboardPage() {
               </p>
             </div>
           ) : (
-            orders.map((order) => {
+            orders
+              .filter((order) => {
+                const st = order.orderStatus || order.status || 'Confirmed';
+                if (orderStatusFilter !== 'All' && st !== orderStatusFilter) return false;
+                if (!orderSearchQuery.trim()) return true;
+                const q = orderSearchQuery.toLowerCase();
+                const name =
+                  order.customerName ||
+                  `${order.customer?.firstName || ''} ${order.customer?.lastName || ''}`;
+                const hay = `${order.id || ''} ${name} ${order.customer?.phone || ''} ${
+                  order.shippingAddress?.city || ''
+                }`.toLowerCase();
+                return hay.includes(q);
+              })
+              .map((order) => {
               const orderTotal = order.total ?? order.totals?.total ?? 0;
               const currentStatus = order.orderStatus || order.status || 'Confirmed';
               const customerName =
