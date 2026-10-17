@@ -18,6 +18,7 @@ export default function CheckoutPage() {
   const {
     cart,
     user,
+    loginWithGoogle,
     settings,
     cartTotals,
     selectedShippingMethodId,
@@ -150,14 +151,45 @@ export default function CheckoutPage() {
         <div className="lg:col-span-7 space-y-6">
           {/* 1. Customer Contact */}
           <div className="bg-white p-6 rounded-2xl border border-[#E6DFD3] space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-serif text-xl font-semibold text-[#1C1A17]">
                 1. Contact Details
               </h2>
               {!user && (
-                <Link to="/login" className="text-xs font-semibold text-[#9E4733] hover:underline">
-                  Have an account? Sign In
-                </Link>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const gUser = await loginWithGoogle({
+                        firstName: 'Amina',
+                        lastName: 'Khalid',
+                        email: 'amina.khalid@gmail.com',
+                        googleId: 'goog-checkout-101',
+                      });
+                      if (gUser) {
+                        setCustomer((prev) => ({
+                          ...prev,
+                          firstName: gUser.firstName || prev.firstName,
+                          lastName: gUser.lastName || prev.lastName,
+                          email: gUser.email || prev.email,
+                          phone: gUser.phone || prev.phone,
+                        }));
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-stone-300 bg-white hover:border-[#1C1A17] text-[11px] font-semibold text-[#1C1A17] cursor-pointer transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" aria-hidden="true">
+                      <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z" />
+                      <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z" />
+                      <path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z" />
+                      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z" />
+                    </svg>
+                    <span>Fast Fill with Google</span>
+                  </button>
+                  <Link to="/login" className="text-xs font-semibold text-[#9E4733] hover:underline">
+                    Sign In
+                  </Link>
+                </div>
               )}
             </div>
 
