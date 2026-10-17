@@ -277,12 +277,26 @@ export function StoreProvider({ children }) {
     [products, wishlist]
   );
 
-  // Recently Viewed Products
+  // Recently Viewed Products & Real View Counter
   const [recentlyViewed, setRecentlyViewed] = useState([]);
 
   const recordProductView = useCallback((productId) => {
     if (!productId) return;
     setRecentlyViewed((prev) => [productId, ...prev.filter((id) => id !== productId)].slice(0, 8));
+    apiService
+      .incrementProductView(productId)
+      .then((newViewCount) => {
+        if (newViewCount !== undefined) {
+          setProducts((prev) =>
+            prev.map((p) =>
+              p.id === productId || p.slug === productId
+                ? { ...p, viewCount: Number(newViewCount) }
+                : p
+            )
+          );
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const recentlyViewedProducts = useMemo(

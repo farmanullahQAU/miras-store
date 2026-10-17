@@ -120,7 +120,7 @@ export default function QuickViewModal() {
                 {product.name}
               </h2>
 
-              <div className="flex items-center gap-3 mt-2.5">
+              <div className="flex flex-wrap items-center gap-3 mt-2.5">
                 <div className="flex items-baseline gap-2">
                   <span className="text-xl font-semibold text-[#1C1917]">
                     {formatPrice(product.price)}
@@ -132,13 +132,26 @@ export default function QuickViewModal() {
                   )}
                 </div>
 
-                {product.rating > 0 && (
-                  <div className="flex items-center gap-1 text-xs text-stone-600 border-l border-stone-200 pl-3">
-                    <Star className="w-3.5 h-3.5 fill-[#C59B5F] text-[#C59B5F]" />
-                    <span className="font-semibold text-[#1C1917]">{product.rating}</span>
-                    <span>({product.reviewCount} reviews)</span>
-                  </div>
-                )}
+                {(() => {
+                  const revList = Array.isArray(product.reviews) ? product.reviews : [];
+                  const revCount = revList.length;
+                  const avgRating =
+                    revCount > 0
+                      ? revList.reduce((s, r) => s + Number(r.rating || 5), 0) / revCount
+                      : Number(product.rating || 5.0);
+                  const views = Math.max(1, Number(product.viewCount || 1));
+                  return (
+                    <div className="flex items-center gap-2 text-xs text-stone-600 border-l border-stone-200 pl-3">
+                      <Star className="w-3.5 h-3.5 fill-[#C59B5F] text-[#C59B5F]" />
+                      <span className="font-semibold text-[#1C1917]">{avgRating.toFixed(1)}</span>
+                      <span>
+                        ({revCount} {revCount === 1 ? 'review' : 'reviews'})
+                      </span>
+                      <span className="text-stone-300">·</span>
+                      <span>{views} views</span>
+                    </div>
+                  );
+                })()}
               </div>
 
               <p className="text-xs sm:text-sm text-stone-600 mt-4 leading-relaxed">

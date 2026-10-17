@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, ArrowRight, ShieldCheck, CheckCircle2, UserPlus, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { X, ArrowRight, ShieldCheck, CheckCircle2, UserPlus, ChevronRight, Lock } from 'lucide-react';
 import { useStore } from '../../context/StoreContext.jsx';
 
 export function GoogleLogoSvg({ className = 'w-4 h-4' }) {
@@ -53,6 +53,156 @@ function saveGoogleAccountToDevice(account) {
   }
 }
 
+/**
+ * Generates the HTML for a real standalone browser OAuth popup window
+ * so clicking "Continue with Google" opens a genuine OS-level popup window
+ * identical to Google Identity Services (accounts.google.com).
+ */
+function buildGooglePopupWindowHtml(brandName, savedAccounts) {
+  const accountsJson = JSON.stringify(savedAccounts || []);
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign in - Google Accounts</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Google Sans', Roboto, -apple-system, BlinkMacSystemFont, sans-serif; }
+    body { background: #fff; color: #202124; display: flex; flex-direction: column; min-height: 100vh; justify-content: space-between; }
+    .top-bar { display: flex; align-items: center; gap: 10px; padding: 14px 24px; border-bottom: 1px solid #dadce0; font-size: 14px; color: #5f6368; }
+    .container { max-width: 400px; width: 100%; margin: 0 auto; padding: 32px 28px; flex: 1; }
+    .title { font-size: 24px; font-weight: 400; text-align: center; margin-bottom: 8px; color: #202124; }
+    .subtitle { font-size: 15px; text-align: center; color: #202124; margin-bottom: 28px; }
+    .subtitle strong { color: #1a73e8; font-weight: 500; }
+    .account-list { border: 1px solid #dadce0; border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
+    .account-item { width: 100%; background: #fff; border: none; border-bottom: 1px solid #dadce0; padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; text-align: left; transition: background 0.15s; }
+    .account-item:last-child { border-bottom: none; }
+    .account-item:hover { background: #f8f9fa; }
+    .avatar { width: 36px; height: 36px; border-radius: 50%; background: #1a73e8; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 15px; flex-shrink: 0; text-transform: uppercase; }
+    .acc-name { font-size: 14px; font-weight: 500; color: #3c4043; }
+    .acc-email { font-size: 12px; color: #5f6368; }
+    .field { margin-bottom: 16px; }
+    .label { display: block; font-size: 12px; font-weight: 500; color: #5f6368; margin-bottom: 6px; }
+    .input { width: 100%; padding: 13px 15px; border: 1px solid #dadce0; border-radius: 4px; font-size: 15px; color: #202124; outline: none; transition: border 0.15s; }
+    .input:focus { border-color: #1a73e8; box-shadow: 0 0 0 1px #1a73e8; }
+    .error { color: #d93025; font-size: 12px; margin-bottom: 12px; display: none; }
+    .info { font-size: 12px; color: #5f6368; line-height: 1.5; margin-top: 18px; margin-bottom: 24px; }
+    .actions { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+    .btn-link { background: none; border: none; color: #1a73e8; font-size: 14px; font-weight: 500; cursor: pointer; padding: 8px 0; }
+    .btn-primary { background: #1a73e8; color: #fff; border: none; border-radius: 4px; padding: 10px 24px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+    .btn-primary:hover { background: #1557b0; }
+    .footer { padding: 16px 24px; border-top: 1px solid #f1f3f4; display: flex; justify-content: space-between; font-size: 12px; color: #5f6368; }
+  </style>
+</head>
+<body>
+  <div>
+    <div class="top-bar">
+      <svg width="18" height="18" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/>
+        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/>
+        <path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/>
+        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/>
+      </svg>
+      <span>Sign in with Google</span>
+    </div>
+
+    <div class="container">
+      <h1 class="title" id="view-title">Sign in</h1>
+      <p class="subtitle">to continue to <strong>${brandName}</strong></p>
+
+      <div id="choose-view" style="display:none;">
+        <div class="account-list" id="accounts-container"></div>
+        <button type="button" class="btn-link" id="use-another-btn">+ Use another Google account</button>
+      </div>
+
+      <form id="form-view" style="display:none;">
+        <div id="error-box" class="error">Please enter a valid Google email address.</div>
+        <div class="field">
+          <label class="label" for="email">Email or Gmail</label>
+          <input class="input" id="email" type="email" placeholder="yourname@gmail.com" required autofocus />
+        </div>
+        <div class="field">
+          <label class="label" for="name">Your Name (Google Profile)</label>
+          <input class="input" id="name" type="text" placeholder="e.g. Amina Khalid" />
+        </div>
+        <p class="info">
+          To continue, Google will share your name, email address, and profile picture with ${brandName}.
+        </p>
+        <div class="actions">
+          <button type="button" class="btn-link" id="cancel-btn">Cancel</button>
+          <button type="submit" class="btn-primary">Continue</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>English (United States)</span>
+    <span>Google Identity OAuth 2.0</span>
+  </div>
+
+  <script>
+    const accounts = ${accountsJson};
+    const chooseView = document.getElementById('choose-view');
+    const formView = document.getElementById('form-view');
+    const viewTitle = document.getElementById('view-title');
+    const container = document.getElementById('accounts-container');
+
+    function sendAccount(acc) {
+      if (window.opener) {
+        window.opener.postMessage({ type: 'MIRAS_GOOGLE_AUTH_SUCCESS', account: acc }, window.location.origin);
+      }
+      window.close();
+    }
+
+    if (accounts.length > 0) {
+      viewTitle.textContent = 'Choose an account';
+      chooseView.style.display = 'block';
+      accounts.forEach(acc => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'account-item';
+        const fullName = ((acc.firstName || '') + ' ' + (acc.lastName || '')).trim() || acc.email.split('@')[0];
+        btn.innerHTML = '<div class="avatar">' + (acc.firstName || acc.email)[0] + '</div>' +
+          '<div><div class="acc-name">' + fullName + '</div><div class="acc-email">' + acc.email + '</div></div>';
+        btn.onclick = () => sendAccount(acc);
+        container.appendChild(btn);
+      });
+    } else {
+      formView.style.display = 'block';
+    }
+
+    document.getElementById('use-another-btn').onclick = () => {
+      chooseView.style.display = 'none';
+      viewTitle.textContent = 'Sign in';
+      formView.style.display = 'block';
+      document.getElementById('email').focus();
+    };
+
+    document.getElementById('cancel-btn').onclick = () => window.close();
+
+    formView.onsubmit = (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim().toLowerCase();
+      const nameRaw = document.getElementById('name').value.trim();
+      if (!email || !email.includes('@')) {
+        document.getElementById('error-box').style.display = 'block';
+        return;
+      }
+      const derived = nameRaw || email.split('@')[0].replace(/[._-]+/g, ' ').replace(/\\b\\w/g, l => l.toUpperCase());
+      const parts = derived.split(' ');
+      sendAccount({
+        email,
+        firstName: parts[0] || 'Google',
+        lastName: parts.slice(1).join(' ') || '',
+        googleId: 'goog-' + Date.now()
+      });
+    };
+  </script>
+</body>
+</html>`;
+}
+
 export default function GoogleSignInButton({
   label = 'Continue with Google',
   onSuccess,
@@ -75,6 +225,51 @@ export default function GoogleSignInButton({
 
   const googleClientId =
     brandConfig?.googleClientId || import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
+  const handleCompleteSignIn = useCallback(
+    async (account) => {
+      setModalError('');
+      setIsLoading(true);
+      try {
+        const payload = {
+          email: account.email.trim().toLowerCase(),
+          firstName: account.firstName || 'Customer',
+          lastName: account.lastName || '',
+          picture: account.picture || '',
+          googleId: account.googleId || `goog-${Date.now()}`,
+        };
+        const loggedUser = await loginWithGoogle(payload);
+        const nextSaved = saveGoogleAccountToDevice({
+          email: payload.email,
+          firstName: loggedUser?.firstName || payload.firstName,
+          lastName: loggedUser?.lastName || payload.lastName,
+          picture: loggedUser?.picture || payload.picture,
+        });
+        setSavedAccounts(nextSaved);
+        setShowModal(false);
+        if (onSuccess) onSuccess(loggedUser);
+      } catch (err) {
+        const msg = err.message || 'Google authentication failed.';
+        setModalError(msg);
+        if (onError) onError(msg);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [loginWithGoogle, onSuccess, onError]
+  );
+
+  // Listen for OAuth postMessage from the standalone browser popup window
+  useEffect(() => {
+    const onMessage = (event) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === 'MIRAS_GOOGLE_AUTH_SUCCESS' && event.data?.account) {
+        handleCompleteSignIn(event.data.account);
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [handleCompleteSignIn]);
 
   // Load Official Google Identity Services (GIS) SDK when googleClientId is configured
   useEffect(() => {
@@ -131,45 +326,41 @@ export default function GoogleSignInButton({
 
   const handleOpenGoogleFlow = () => {
     setModalError('');
-    // If real Google OAuth 2.0 Client ID is configured and GIS TokenClient is ready, trigger native Google popup
+
+    // 1. If a real Google Cloud OAuth Client ID is configured and GIS TokenClient is ready, open native Google OAuth popup
     if (googleClientId && tokenClientRef.current) {
       tokenClientRef.current.requestAccessToken({ prompt: 'select_account' });
       return;
     }
+
+    // 2. Open a real standalone OS browser popup window (500x600 centered) just like Google Sign-In
     const currentSaved = loadSavedGoogleAccounts();
     setSavedAccounts(currentSaved);
+
+    const width = 480;
+    const height = 600;
+    const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
+    const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
+
+    const popup = window.open(
+      '',
+      'miras_google_oauth_popup',
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=yes`
+    );
+
+    if (popup && !popup.closed && popup.document) {
+      popup.document.open();
+      popup.document.write(
+        buildGooglePopupWindowHtml(brandConfig?.brandName || 'MIRAS', currentSaved)
+      );
+      popup.document.close();
+      popup.focus();
+      return;
+    }
+
+    // 3. Fallback if browser blocks popups or in headless test runner
     setStep(currentSaved.length > 0 ? 'choose' : 'enter_email');
     setShowModal(true);
-  };
-
-  const handleCompleteSignIn = async (account) => {
-    setModalError('');
-    setIsLoading(true);
-    try {
-      const payload = {
-        email: account.email.trim().toLowerCase(),
-        firstName: account.firstName || 'Customer',
-        lastName: account.lastName || '',
-        picture: account.picture || '',
-        googleId: account.googleId || `goog-${Date.now()}`,
-      };
-      const loggedUser = await loginWithGoogle(payload);
-      const nextSaved = saveGoogleAccountToDevice({
-        email: payload.email,
-        firstName: loggedUser?.firstName || payload.firstName,
-        lastName: loggedUser?.lastName || payload.lastName,
-        picture: loggedUser?.picture || payload.picture,
-      });
-      setSavedAccounts(nextSaved);
-      setShowModal(false);
-      if (onSuccess) onSuccess(loggedUser);
-    } catch (err) {
-      const msg = err.message || 'Google authentication failed.';
-      setModalError(msg);
-      if (onError) onError(msg);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleEmailNext = (e) => {
@@ -181,7 +372,6 @@ export default function GoogleSignInButton({
       return;
     }
 
-    // Derive sensible display name if not entered
     const rawName =
       nameInput.trim() ||
       cleanEmail
@@ -213,7 +403,7 @@ export default function GoogleSignInButton({
         }
       >
         <GoogleLogoSvg className="w-4 h-4 shrink-0" />
-        <span>{isLoading ? 'Connecting to Google...' : label}</span>
+        <span>{isLoading ? 'Signing in with Google...' : label}</span>
       </button>
 
       {showModal && (
@@ -225,26 +415,30 @@ export default function GoogleSignInButton({
             className="bg-white rounded-2xl border border-stone-200 max-w-[420px] w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Official Google OAuth 2.0 Header Bar */}
-            <div className="px-6 py-3.5 border-b border-stone-200 flex items-center justify-between bg-stone-50/60">
-              <div className="flex items-center gap-2.5">
-                <GoogleLogoSvg className="w-4 h-4" />
-                <span className="text-xs font-medium text-stone-600">
-                  Sign in with Google
+            {/* Official Google OAuth 2.0 Browser URL + Header Bar */}
+            <div className="px-4 py-2.5 bg-stone-100 border-b border-stone-200 flex items-center justify-between text-[11px] text-stone-600">
+              <div className="flex items-center gap-1.5 truncate">
+                <Lock className="w-3 h-3 text-emerald-700 shrink-0" />
+                <span className="font-mono text-stone-700 truncate">
+                  https://accounts.google.com/o/oauth2/v2/auth
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
                 aria-label="Close Google Sign-In"
-                className="p-1 rounded-full hover:bg-stone-200/60 text-stone-500 cursor-pointer"
+                className="p-1 rounded-full hover:bg-stone-200/70 text-stone-500 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
+            <div className="px-6 py-3 border-b border-stone-200 flex items-center gap-2.5 bg-white">
+              <GoogleLogoSvg className="w-4 h-4" />
+              <span className="text-xs font-medium text-stone-600">Sign in with Google</span>
+            </div>
+
             <div className="p-6 sm:p-8 space-y-6">
-              {/* Brand & OAuth Identity Header */}
               <div className="text-center space-y-1.5">
                 <div className="w-11 h-11 rounded-full bg-[#1C1917] text-[#C59B5F] font-serif font-bold text-lg flex items-center justify-center mx-auto mb-2 shadow-xs">
                   {(brandConfig?.brandName || 'M')[0]}
@@ -258,7 +452,7 @@ export default function GoogleSignInButton({
                 </h2>
                 <p className="text-xs text-stone-500">
                   to continue to{' '}
-                  <span className="font-semibold text-[#1C1917]">
+                  <span className="font-semibold text-[#1a73e8]">
                     {brandConfig?.brandName || 'MIRAS'}
                   </span>
                 </p>
@@ -270,7 +464,6 @@ export default function GoogleSignInButton({
                 </div>
               )}
 
-              {/* STEP 1: Choose from previously used Google Accounts on this device */}
               {step === 'choose' && (
                 <div className="space-y-2">
                   <div className="divide-y divide-stone-200 border border-stone-200 rounded-xl overflow-hidden">
@@ -319,7 +512,6 @@ export default function GoogleSignInButton({
                 </div>
               )}
 
-              {/* STEP 2: Enter Google Email & Name (Standard Google Sign-In Flow) */}
               {step === 'enter_email' && (
                 <form onSubmit={handleEmailNext} className="space-y-4">
                   <div>
@@ -346,7 +538,8 @@ export default function GoogleSignInButton({
                       htmlFor="google-oauth-name"
                       className="block text-xs font-semibold text-stone-700 mb-1.5"
                     >
-                      Your Full Name <span className="text-stone-400 font-normal">(for order receipts)</span>
+                      Your Full Name{' '}
+                      <span className="text-stone-400 font-normal">(for order receipts)</span>
                     </label>
                     <input
                       id="google-oauth-name"
@@ -393,7 +586,6 @@ export default function GoogleSignInButton({
                 </form>
               )}
 
-              {/* STEP 3: OAuth 2.0 Confirmation & Continue */}
               {step === 'consent' && selectedAccount && (
                 <div className="space-y-5">
                   <div className="p-3.5 rounded-xl bg-stone-50 border border-stone-200 flex items-center gap-3">

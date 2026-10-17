@@ -192,15 +192,21 @@ export default function ProductCard({ product }) {
             <span className="truncate uppercase tracking-wider font-medium">
               {product.category}
             </span>
-            {product.rating > 0 && (
-              <span className="inline-flex items-center gap-1 text-stone-700 font-medium shrink-0">
-                <Star className="w-3 h-3 fill-[#C59B5F] text-[#C59B5F]" />
-                <span>{product.rating.toFixed(1)}</span>
-                {product.reviewCount > 0 && (
-                  <span className="text-stone-400">({product.reviewCount})</span>
-                )}
-              </span>
-            )}
+            {(() => {
+              const revList = Array.isArray(product.reviews) ? product.reviews : [];
+              const revCount = revList.length;
+              const avgRating =
+                revCount > 0
+                  ? revList.reduce((s, r) => s + Number(r.rating || 5), 0) / revCount
+                  : Number(product.rating || 5.0);
+              return (
+                <span className="inline-flex items-center gap-1 text-stone-700 font-medium shrink-0">
+                  <Star className="w-3 h-3 fill-[#C59B5F] text-[#C59B5F]" />
+                  <span>{avgRating.toFixed(1)}</span>
+                  <span className="text-stone-400">({revCount})</span>
+                </span>
+              );
+            })()}
           </div>
 
           <Link

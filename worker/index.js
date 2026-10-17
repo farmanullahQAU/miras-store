@@ -268,6 +268,18 @@ function buildProductRelationStatements(db, product) {
 async function seedStarterProductsD1(db) {
   const stmts = [];
   for (const p of INITIAL_PRODUCTS) {
+    const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
+    const exactReviewCount = prodReviews.length;
+    const computedRating =
+      exactReviewCount > 0
+        ? Number(
+            (
+              prodReviews.reduce((sum, r) => sum + Number(r.rating || 5), 0) /
+              exactReviewCount
+            ).toFixed(1)
+          )
+        : Number(p.rating || 5.0);
+
     stmts.push(
       db
         .prepare(
@@ -296,8 +308,8 @@ async function seedStarterProductsD1(db) {
           p.featured ? 1 : 0,
           p.isNew ? 1 : 0,
           p.isBestSeller ? 1 : 0,
-          Number(p.rating || 5.0),
-          Number(p.reviewCount || 0),
+          computedRating,
+          exactReviewCount,
           JSON.stringify(p.images || []),
           JSON.stringify(p.variants || { colors: [], sizes: ['Standard'], materials: [] }),
           JSON.stringify({
@@ -308,6 +320,29 @@ async function seedStarterProductsD1(db) {
         )
     );
     stmts.push(...buildProductRelationStatements(db, p));
+
+    // Seed starter product reviews into normalized product_reviews table
+    for (const rev of prodReviews) {
+      stmts.push(
+        db
+          .prepare(
+            `INSERT OR REPLACE INTO product_reviews (
+              id, product_id, author, location, rating, title, comment, verified_purchase, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          )
+          .bind(
+            rev.id || `rev-${p.id}-${Math.random().toString(36).slice(2, 6)}`,
+            p.id,
+            rev.author || 'Verified Customer',
+            rev.location || 'Pakistan',
+            Number(rev.rating || 5),
+            rev.title || '',
+            rev.comment || '',
+            rev.verified !== false ? 1 : 0,
+            rev.date ? `${rev.date}T10:00:00Z` : new Date().toISOString()
+          )
+      );
+    }
   }
   if (stmts.length > 0) await db.batch(stmts);
 }
@@ -372,6 +407,12 @@ async function ensureD1Seeded(db) {
         )`
       ),
     ]);
+
+    // Auto-migrate view_count column on products table if upgrading an existing D1 database
+    await db
+      .prepare('ALTER TABLE products ADD COLUMN view_count INTEGER NOT NULL DEFAULT 0')
+      .run()
+      .catch(() => {});
 
     // Check if store_settings row id=1 exists (indicates DB has already been initialized)
     const setting = await db.prepare('SELECT id FROM store_settings WHERE id = 1').first();
@@ -456,11 +497,23 @@ async function ensureD1Seeded(db) {
   }
 }
 
-function mapProductRow(r, reviewsByProductId = {}) {
+function mapProductRow(r, reviewsByProductId = null) {
   if (!r) return null;
   const price = Number(r.price);
   const originalPrice = r.original_price ? Number(r.original_price) : null;
-  const prodReviews = reviewsByProductId[r.id] || [];
+  const hasReviewMap = reviewsByProductId !== null && typeof reviewsByProductId === 'object';
+  const prodReviews = hasReviewMap ? reviewsByProductId[r.id] || [] : Array.isArray(r.reviews) ? r.reviews : [];
+  const exactReviewCount = hasReviewMap ? prodReviews.length : prodReviews.length || Number(r.review_count || 0);
+  const computedRating =
+    prodReviews.length > 0
+      ? Number(
+          (
+            prodReviews.reduce((sum, rev) => sum + Number(rev.rating || 5), 0) /
+            prodReviews.length
+          ).toFixed(1)
+        )
+      : Number(r.rating || 5.0);
+
   const specifications =
     typeof r.specifications_json === 'string'
       ? JSON.parse(r.specifications_json)
@@ -495,8 +548,9 @@ function mapProductRow(r, reviewsByProductId = {}) {
     isFeatured: Boolean(r.featured),
     isNew: Boolean(r.is_new),
     isBestSeller: Boolean(r.is_best_seller),
-    rating: Number(r.rating || 5.0),
-    reviewCount: prodReviews.length > 0 ? prodReviews.length : Number(r.review_count || 0),
+    rating: computedRating,
+    reviewCount: exactReviewCount,
+    viewCount: Number(r.view_count ?? r.viewCount ?? 1),
     reviews: prodReviews,
     images:
       typeof r.images_json === 'string' ? JSON.parse(r.images_json) : r.images || [],
@@ -1465,6 +1519,42 @@ app.delete('/api/products/:id/reviews/:reviewId', async (c) => {
   });
 
   return c.json({ deleted: true });
+});
+
+app.post('/api/products/:id/view', async (c) => {
+  const id = c.req.param('id');
+  let viewCount = 1;
+
+  if (c.env?.DB) {
+    try {
+      await ensureD1Seeded(c.env.DB);
+      await c.env.DB.prepare(
+        'UPDATE products SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ? OR slug = ?'
+      )
+        .bind(id, id)
+        .run();
+
+      const row = await c.env.DB.prepare(
+        'SELECT id, view_count FROM products WHERE id = ? OR slug = ?'
+      )
+        .bind(id, id)
+        .first();
+      if (row) {
+        viewCount = Number(row.view_count || 1);
+      }
+    } catch (e) {
+      console.error('Failed incrementing product view in D1:', e);
+    }
+  }
+
+  edgeProducts = edgeProducts.map((p) => {
+    if (p.id !== id && p.slug !== id) return p;
+    const nextViews = (Number(p.viewCount) || 0) + 1;
+    if (!c.env?.DB) viewCount = nextViews;
+    return { ...p, viewCount: Math.max(viewCount, nextViews) };
+  });
+
+  return c.json({ productId: id, viewCount });
 });
 
 // -----------------------------------------------------------------------------

@@ -356,6 +356,31 @@ test('8. Hono Cloudflare Worker: Review moderation (create & delete) and full St
   assert.equal(settingsRes.status, 200);
   const { config } = await settingsRes.json();
   assert.equal(config.lookbookBanner.heading, 'Updated Seasonal Heritage Lookbook');
+
+  // 4. Verify real product view counter increments accurately and reviewCount matches reviews.length
+  const viewRes1 = await app.fetch(
+    new Request(`http://localhost/api/products/${targetProdId}/view`, {
+      method: 'POST',
+    })
+  );
+  assert.equal(viewRes1.status, 200);
+  const viewData1 = await viewRes1.json();
+  assert.ok(viewData1.viewCount >= 2);
+
+  const viewRes2 = await app.fetch(
+    new Request(`http://localhost/api/products/${targetProdId}/view`, {
+      method: 'POST',
+    })
+  );
+  const viewData2 = await viewRes2.json();
+  assert.equal(viewData2.viewCount, viewData1.viewCount + 1);
+
+  const allProdRes = await app.fetch(new Request('http://localhost/api/products'));
+  const { products: allProds } = await allProdRes.json();
+  for (const p of allProds) {
+    assert.equal(p.reviewCount, (p.reviews || []).length);
+  }
 });
+
 
 

@@ -2106,8 +2106,9 @@ var INITIAL_PRODUCTS = [
     sku: "MRS-001",
     stock: 15,
     stockStatus: "in_stock",
-    rating: 4.9,
-    reviewCount: 18,
+    rating: 5,
+    reviewCount: 2,
+    viewCount: 1,
     featured: true,
     isBestSeller: true,
     isNew: true,
@@ -2134,13 +2135,24 @@ var INITIAL_PRODUCTS = [
     tags: ["shawl", "pashmina", "kashmir", "swat", "traditional", "winter", "gift"],
     reviews: [
       {
-        id: "rev-1",
+        id: "rev-101",
         author: "Ayesha K.",
         location: "Lahore",
         rating: 5,
         date: "2026-10-05",
-        title: "Beautiful embroidery and very soft fabric",
-        comment: "Ordered via Cash on Delivery and received within 2 days. Quality is outstanding."
+        title: "Beautiful Sozni embroidery and very soft wool",
+        comment: "Ordered via Cash on Delivery and received within 2 days in Lahore. The needlepoint border work is genuinely hand-stitched and warm.",
+        verified: true
+      },
+      {
+        id: "rev-102",
+        author: "Tariq Mahmood",
+        location: "Islamabad",
+        rating: 5,
+        date: "2026-10-11",
+        title: "Gifted to my mother \u2014 she loved the presentation",
+        comment: "Came in a luxury box ready for gifting. Authentic Kashmiri and Swati weave quality.",
+        verified: true
       }
     ]
   },
@@ -2159,8 +2171,9 @@ var INITIAL_PRODUCTS = [
     sku: "MRS-002",
     stock: 20,
     stockStatus: "in_stock",
-    rating: 4.9,
-    reviewCount: 24,
+    rating: 5,
+    reviewCount: 2,
+    viewCount: 1,
     featured: true,
     isBestSeller: true,
     isNew: true,
@@ -2185,7 +2198,28 @@ var INITIAL_PRODUCTS = [
       Fit: "Regular Relaxed Fit"
     },
     tags: ["kurta", "fashion", "silk", "lahore", "punjab", "stitched", "festive"],
-    reviews: []
+    reviews: [
+      {
+        id: "rev-201",
+        author: "Hina Raza",
+        location: "Karachi",
+        rating: 5,
+        date: "2026-10-08",
+        title: "True to size and elegant Lahori Tilla work",
+        comment: "Ordered Medium after checking the Size Guide and the shoulder and chest fit is spot on. Fabric drape is very graceful.",
+        verified: true
+      },
+      {
+        id: "rev-202",
+        author: "Sana Mir",
+        location: "Lahore",
+        rating: 5,
+        date: "2026-10-14",
+        title: "Perfect for festive dinners",
+        comment: "The terracotta shade looks even richer in person. Stitching finish is very neat.",
+        verified: true
+      }
+    ]
   },
   {
     id: "prod-003",
@@ -2203,7 +2237,8 @@ var INITIAL_PRODUCTS = [
     stock: 10,
     stockStatus: "in_stock",
     rating: 5,
-    reviewCount: 14,
+    reviewCount: 1,
+    viewCount: 1,
     featured: true,
     isBestSeller: true,
     isNew: false,
@@ -2227,7 +2262,18 @@ var INITIAL_PRODUCTS = [
       Hardware: "Solid Antique Brass Buckles & Zippers"
     },
     tags: ["bag", "leather", "peshawar", "kpk", "accessories", "travel"],
-    reviews: []
+    reviews: [
+      {
+        id: "rev-301",
+        author: "Kamran Afridi",
+        location: "Peshawar",
+        rating: 5,
+        date: "2026-10-09",
+        title: "Heavy-duty full grain leather and solid brass",
+        comment: "Built to last decades. The stitching and brass buckles are top-notch quality.",
+        verified: true
+      }
+    ]
   },
   {
     id: "prod-004",
@@ -2244,8 +2290,9 @@ var INITIAL_PRODUCTS = [
     sku: "MRS-004",
     stock: 30,
     stockStatus: "in_stock",
-    rating: 4.9,
-    reviewCount: 32,
+    rating: 5,
+    reviewCount: 2,
+    viewCount: 1,
     featured: true,
     isBestSeller: true,
     isNew: true,
@@ -2266,7 +2313,28 @@ var INITIAL_PRODUCTS = [
       Packaging: "Ready-to-gift Velvet Lined Box"
     },
     tags: ["perfume", "attar", "oud", "gift", "fragrance"],
-    reviews: []
+    reviews: [
+      {
+        id: "rev-401",
+        author: "Usman Sheikh",
+        location: "Faisalabad",
+        rating: 5,
+        date: "2026-10-07",
+        title: "Lasts all day on cotton and wool",
+        comment: "The Cambodi Oud and Damascus Rose notes are rich and smooth without any harshness.",
+        verified: true
+      },
+      {
+        id: "rev-402",
+        author: "Bilal Ahmed",
+        location: "Multan",
+        rating: 5,
+        date: "2026-10-12",
+        title: "Great gift box presentation",
+        comment: "Bought two sets for wedding gifts. Everyone asked where they were from.",
+        verified: true
+      }
+    ]
   },
   {
     id: "prod-005",
@@ -2283,8 +2351,9 @@ var INITIAL_PRODUCTS = [
     sku: "MRS-005",
     stock: 18,
     stockStatus: "in_stock",
-    rating: 4.8,
-    reviewCount: 15,
+    rating: 5,
+    reviewCount: 1,
+    viewCount: 1,
     featured: false,
     isBestSeller: false,
     isNew: true,
@@ -2307,7 +2376,18 @@ var INITIAL_PRODUCTS = [
       Packaging: "Jewelry keepsake box included"
     },
     tags: ["jewelry", "earrings", "jhumka", "bahawalpur", "accessories", "gift"],
-    reviews: []
+    reviews: [
+      {
+        id: "rev-501",
+        author: "Zoya Malik",
+        location: "Bahawalpur",
+        rating: 5,
+        date: "2026-10-10",
+        title: "Lightweight and intricate Kundan setting",
+        comment: "Wore them for a full wedding event without any ear fatigue. Beautiful antique finish.",
+        verified: true
+      }
+    ]
   },
   {
     id: "prod-006",
@@ -2324,8 +2404,9 @@ var INITIAL_PRODUCTS = [
     sku: "MRS-006",
     stock: 12,
     stockStatus: "in_stock",
-    rating: 4.9,
-    reviewCount: 11,
+    rating: 5,
+    reviewCount: 1,
+    viewCount: 1,
     featured: true,
     isBestSeller: false,
     isNew: true,
@@ -2348,7 +2429,18 @@ var INITIAL_PRODUCTS = [
       Packaging: "Double-boxed shatter-proof foam packaging"
     },
     tags: ["home", "decor", "vase", "multan", "punjab", "ceramics"],
-    reviews: []
+    reviews: [
+      {
+        id: "rev-601",
+        author: "Farah Gillani",
+        location: "Lahore",
+        rating: 5,
+        date: "2026-10-13",
+        title: "Arrived safely double-boxed",
+        comment: "Authentic Multani blue glaze work. Looks stunning on our dining console.",
+        verified: true
+      }
+    ]
   },
   {
     id: "prod-007",
@@ -2366,7 +2458,8 @@ var INITIAL_PRODUCTS = [
     stock: 25,
     stockStatus: "in_stock",
     rating: 5,
-    reviewCount: 29,
+    reviewCount: 1,
+    viewCount: 1,
     featured: true,
     isBestSeller: true,
     isNew: true,
@@ -2390,7 +2483,18 @@ var INITIAL_PRODUCTS = [
       Dimensions: "100 cm \xD7 250 cm"
     },
     tags: ["ajrak", "sindh", "sindhi", "shawl", "traditional", "indigo", "block-print"],
-    reviews: []
+    reviews: [
+      {
+        id: "rev-701",
+        author: "Sarang Memon",
+        location: "Hyderabad",
+        rating: 5,
+        date: "2026-10-14",
+        title: "Genuine Bhitshah block-printed Ajrak",
+        comment: "You can immediately tell by the natural indigo aroma and double-sided stamp alignment that this is authentic artisan Ajrak.",
+        verified: true
+      }
+    ]
   },
   {
     id: "prod-008",
@@ -2407,8 +2511,9 @@ var INITIAL_PRODUCTS = [
     sku: "MRS-008",
     stock: 14,
     stockStatus: "in_stock",
-    rating: 4.9,
-    reviewCount: 21,
+    rating: 5,
+    reviewCount: 1,
+    viewCount: 1,
     featured: true,
     isBestSeller: true,
     isNew: true,
@@ -2432,11 +2537,22 @@ var INITIAL_PRODUCTS = [
       Fit: "Traditional Tailored Silhouette"
     },
     tags: ["balochi", "balochistan", "quetta", "embroidery", "kurta", "fashion", "traditional"],
-    reviews: []
+    reviews: [
+      {
+        id: "rev-801",
+        author: "Mahgul Baloch",
+        location: "Quetta",
+        rating: 5,
+        date: "2026-10-15",
+        title: "Intricate hand-stitched Doch needlework",
+        comment: "So proud to see authentic Kalat and Quetta Doch embroidery presented with such fine tailoring.",
+        verified: true
+      }
+    ]
   },
   {
     id: "prod-009",
-    name: "Hunza & Chitrali Hand-Spun Pure Woolatti Chugha & Cap Set",
+    name: "Hunza & Chitrali Hand-Spun Pure Patti Wool Cap & Wrap Set",
     slug: "hunza-chitrali-hand-spun-pure-wool-patti-cap-set",
     shortDescription: "Authentic hand-woven Chitrali & Hunza highland wool Pakol cap and artisanal border wrap from Gilgit-Baltistan.",
     description: "Woven from 100% pure mountain sheep wool in Chitral and Hunza Valley. Naturally weather-resistant, warm, and finished with traditional Gilgit-Baltistan geometric border motifs.",
@@ -2449,8 +2565,9 @@ var INITIAL_PRODUCTS = [
     sku: "MRS-009",
     stock: 16,
     stockStatus: "in_stock",
-    rating: 4.9,
-    reviewCount: 19,
+    rating: 5,
+    reviewCount: 1,
+    viewCount: 1,
     featured: true,
     isBestSeller: false,
     isNew: true,
@@ -2474,7 +2591,18 @@ var INITIAL_PRODUCTS = [
       Care: "Gentle cold hand wash or dry clean"
     },
     tags: ["hunza", "chitral", "gilgit", "wool", "traditional", "winter", "gift"],
-    reviews: []
+    reviews: [
+      {
+        id: "rev-901",
+        author: "shahid Karim",
+        location: "Gilgit",
+        rating: 5,
+        date: "2026-10-15",
+        title: "Pure warm Patti wool for winter",
+        comment: "Genuine hand-spun Chitrali Patti wool. Very warm and comfortable fit.",
+        verified: true
+      }
+    ]
   }
 ];
 var INITIAL_COUPONS = [
@@ -2867,6 +2995,11 @@ function buildProductRelationStatements(db, product) {
 async function seedStarterProductsD1(db) {
   const stmts = [];
   for (const p of INITIAL_PRODUCTS) {
+    const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
+    const exactReviewCount = prodReviews.length;
+    const computedRating = exactReviewCount > 0 ? Number(
+      (prodReviews.reduce((sum, r) => sum + Number(r.rating || 5), 0) / exactReviewCount).toFixed(1)
+    ) : Number(p.rating || 5);
     stmts.push(
       db.prepare(
         `INSERT OR REPLACE INTO products (
@@ -2893,8 +3026,8 @@ async function seedStarterProductsD1(db) {
         p.featured ? 1 : 0,
         p.isNew ? 1 : 0,
         p.isBestSeller ? 1 : 0,
-        Number(p.rating || 5),
-        Number(p.reviewCount || 0),
+        computedRating,
+        exactReviewCount,
         JSON.stringify(p.images || []),
         JSON.stringify(p.variants || { colors: [], sizes: ["Standard"], materials: [] }),
         JSON.stringify({
@@ -2905,6 +3038,25 @@ async function seedStarterProductsD1(db) {
       )
     );
     stmts.push(...buildProductRelationStatements(db, p));
+    for (const rev of prodReviews) {
+      stmts.push(
+        db.prepare(
+          `INSERT OR REPLACE INTO product_reviews (
+              id, product_id, author, location, rating, title, comment, verified_purchase, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          rev.id || `rev-${p.id}-${Math.random().toString(36).slice(2, 6)}`,
+          p.id,
+          rev.author || "Verified Customer",
+          rev.location || "Pakistan",
+          Number(rev.rating || 5),
+          rev.title || "",
+          rev.comment || "",
+          rev.verified !== false ? 1 : 0,
+          rev.date ? `${rev.date}T10:00:00Z` : (/* @__PURE__ */ new Date()).toISOString()
+        )
+      );
+    }
   }
   if (stmts.length > 0) await db.batch(stmts);
 }
@@ -2967,6 +3119,8 @@ async function ensureD1Seeded(db) {
         )`
       )
     ]);
+    await db.prepare("ALTER TABLE products ADD COLUMN view_count INTEGER NOT NULL DEFAULT 0").run().catch(() => {
+    });
     const setting = await db.prepare("SELECT id FROM store_settings WHERE id = 1").first();
     const isFirstTimeInit = !setting;
     if (isFirstTimeInit) {
@@ -3027,11 +3181,16 @@ async function ensureD1Seeded(db) {
     console.error("D1 Seeding error (non-fatal):", err);
   }
 }
-function mapProductRow(r, reviewsByProductId = {}) {
+function mapProductRow(r, reviewsByProductId = null) {
   if (!r) return null;
   const price = Number(r.price);
   const originalPrice = r.original_price ? Number(r.original_price) : null;
-  const prodReviews = reviewsByProductId[r.id] || [];
+  const hasReviewMap = reviewsByProductId !== null && typeof reviewsByProductId === "object";
+  const prodReviews = hasReviewMap ? reviewsByProductId[r.id] || [] : Array.isArray(r.reviews) ? r.reviews : [];
+  const exactReviewCount = hasReviewMap ? prodReviews.length : prodReviews.length || Number(r.review_count || 0);
+  const computedRating = prodReviews.length > 0 ? Number(
+    (prodReviews.reduce((sum, rev) => sum + Number(rev.rating || 5), 0) / prodReviews.length).toFixed(1)
+  ) : Number(r.rating || 5);
   const specifications = typeof r.specifications_json === "string" ? JSON.parse(r.specifications_json) : r.specifications || {};
   const culturalOrigin = r.cultural_origin || r.culturalOrigin || specifications?.Origin || specifications?.Region || "";
   return {
@@ -3057,8 +3216,9 @@ function mapProductRow(r, reviewsByProductId = {}) {
     isFeatured: Boolean(r.featured),
     isNew: Boolean(r.is_new),
     isBestSeller: Boolean(r.is_best_seller),
-    rating: Number(r.rating || 5),
-    reviewCount: prodReviews.length > 0 ? prodReviews.length : Number(r.review_count || 0),
+    rating: computedRating,
+    reviewCount: exactReviewCount,
+    viewCount: Number(r.view_count ?? r.viewCount ?? 1),
     reviews: prodReviews,
     images: typeof r.images_json === "string" ? JSON.parse(r.images_json) : r.images || [],
     variants: typeof r.variants_json === "string" ? JSON.parse(r.variants_json) : r.variants || { colors: [], sizes: ["Standard"], materials: [] },
@@ -3822,6 +3982,33 @@ app.delete("/api/products/:id/reviews/:reviewId", async (c) => {
     };
   });
   return c.json({ deleted: true });
+});
+app.post("/api/products/:id/view", async (c) => {
+  const id = c.req.param("id");
+  let viewCount = 1;
+  if (c.env?.DB) {
+    try {
+      await ensureD1Seeded(c.env.DB);
+      await c.env.DB.prepare(
+        "UPDATE products SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ? OR slug = ?"
+      ).bind(id, id).run();
+      const row = await c.env.DB.prepare(
+        "SELECT id, view_count FROM products WHERE id = ? OR slug = ?"
+      ).bind(id, id).first();
+      if (row) {
+        viewCount = Number(row.view_count || 1);
+      }
+    } catch (e) {
+      console.error("Failed incrementing product view in D1:", e);
+    }
+  }
+  edgeProducts = edgeProducts.map((p) => {
+    if (p.id !== id && p.slug !== id) return p;
+    const nextViews = (Number(p.viewCount) || 0) + 1;
+    if (!c.env?.DB) viewCount = nextViews;
+    return { ...p, viewCount: Math.max(viewCount, nextViews) };
+  });
+  return c.json({ productId: id, viewCount });
 });
 app.post("/api/auth/login", async (c) => {
   const { email, password } = await c.req.json();

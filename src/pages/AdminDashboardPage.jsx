@@ -806,7 +806,9 @@ export default function AdminDashboardPage() {
                               >
                                 {product.name}
                               </Link>
-                              <p className="text-[11px] text-[#5C564F]">SKU: {product.sku}</p>
+                              <p className="text-[11px] text-[#5C564F]">
+                                SKU: {product.sku} · 👁 {Math.max(1, Number(product.viewCount || 1))} views · ★ {(product.reviews?.length || 0)} reviews
+                              </p>
                             </div>
                           </div>
                         </td>

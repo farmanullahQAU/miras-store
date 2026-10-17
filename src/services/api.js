@@ -311,6 +311,35 @@ export const apiService = {
     return true;
   },
 
+  async incrementProductView(productId) {
+    try {
+      const data = await requestWorker(`/products/${productId}/view`, {
+        method: 'POST',
+      });
+      if (data?.viewCount !== undefined) {
+        const products = readStorage(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
+        const updated = products.map((p) =>
+          p.id === productId || p.slug === productId
+            ? { ...p, viewCount: Number(data.viewCount) }
+            : p
+        );
+        writeStorage(STORAGE_KEYS.PRODUCTS, updated);
+        return Number(data.viewCount);
+      }
+    } catch {
+      // Fallback
+    }
+    const products = readStorage(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
+    let nextCount = 1;
+    const updated = products.map((p) => {
+      if (p.id !== productId && p.slug !== productId) return p;
+      nextCount = (Number(p.viewCount) || 0) + 1;
+      return { ...p, viewCount: nextCount };
+    });
+    writeStorage(STORAGE_KEYS.PRODUCTS, updated);
+    return nextCount;
+  },
+
   async getOrders() {
     try {
       const data = await requestWorker('/orders');

@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS products (
   is_best_seller INTEGER NOT NULL DEFAULT 0,
   rating REAL NOT NULL DEFAULT 5.0,
   review_count INTEGER NOT NULL DEFAULT 0,
+  view_count INTEGER NOT NULL DEFAULT 0,
   images_json TEXT NOT NULL DEFAULT '[]',
   variants_json TEXT NOT NULL DEFAULT '{"colors":[],"sizes":["Standard"],"materials":[]}',
   specifications_json TEXT NOT NULL DEFAULT '{}',
