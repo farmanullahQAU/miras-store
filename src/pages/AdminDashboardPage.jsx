@@ -105,6 +105,7 @@ export default function AdminDashboardPage() {
 
   const [activeTab, setActiveTab] = useState('products');
   const [searchQuery, setSearchQuery] = useState('');
+  const [stockFilter, setStockFilter] = useState('all'); // 'all' | 'low' | 'out'
   const [copiedId, setCopiedId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [confirmClearModal, setConfirmClearModal] = useState(false);
@@ -550,11 +551,69 @@ export default function AdminDashboardPage() {
     win.document.close();
   };
 
-  const filteredProducts = products.filter(
-    (p) =>
+  const exportOrdersToCsv = () => {
+    if (!orders || orders.length === 0) {
+      addToast('No orders to export yet.', 'info');
+      return;
+    }
+    const headers = [
+      'Order ID',
+      'Date',
+      'Customer Name',
+      'Phone',
+      'Email',
+      'City',
+      'Address',
+      'Payment Method',
+      'Order Status',
+      'Courier',
+      'Tracking Number',
+      'Total (PKR)',
+    ];
+    const escapeCsv = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+    const rows = orders.map((o) => {
+      const custName =
+        o.customerName || `${o.customer?.firstName || ''} ${o.customer?.lastName || ''}`.trim();
+      const totalAmt = o.total ?? o.totals?.total ?? 0;
+      return [
+        o.id,
+        new Date(o.createdAt).toISOString().slice(0, 10),
+        custName,
+        o.customer?.phone || '',
+        o.customer?.email || '',
+        o.shippingAddress?.city || '',
+        o.shippingAddress?.addressLine1 || '',
+        o.paymentMethod === 'cod' ? 'COD' : 'Prepaid',
+        o.orderStatus || o.status || 'Confirmed',
+        o.courierName || 'TCS / Leopards',
+        o.trackingNumber || 'Pending',
+        totalAmt,
+      ]
+        .map(escapeCsv)
+        .join(',');
+    });
+    const csvContent = [headers.map(escapeCsv).join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `miras-orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    addToast(`Exported ${orders.length} orders to CSV!`, 'success');
+  };
+
+  const filteredProducts = products.filter((p) => {
+    const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.sku || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      (p.sku || '').toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
+    if (stockFilter === 'low') return p.stock > 0 && p.stock <= 5;
+    if (stockFilter === 'out') return p.stock <= 0;
+    return true;
+  });
 
   const previewImages = productForm.imagesText
     .split('\n')
@@ -700,6 +759,33 @@ export default function AdminDashboardPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center bg-[#FBF9F5] p-1 rounded-xl border border-[#E6DFD3]">
+                {[
+                  { id: 'all', label: `All (${products.length})` },
+                  {
+                    id: 'low',
+                    label: `Low Stock (${products.filter((p) => Number(p.stock) > 0 && Number(p.stock) <= 5).length})`,
+                  },
+                  {
+                    id: 'out',
+                    label: `Out of Stock (${products.filter((p) => Number(p.stock) <= 0).length})`,
+                  },
+                ].map((pill) => (
+                  <button
+                    key={pill.id}
+                    type="button"
+                    onClick={() => setStockFilter(pill.id)}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
+                      stockFilter === pill.id
+                        ? 'bg-[#1C1A17] text-white shadow-2xs'
+                        : 'text-[#5C564F] hover:text-[#1C1A17]'
+                    }`}
+                  >
+                    {pill.label}
+                  </button>
+                ))}
+              </div>
+
               {products.length > 0 ? (
                 <button
                   type="button"
@@ -1241,6 +1327,27 @@ export default function AdminDashboardPage() {
       {/* TAB 3: ORDERS MANAGEMENT */}
       {activeTab === 'orders' && (
         <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-[#E6DFD3]">
+            <div>
+              <h3 className="font-serif text-lg font-semibold text-[#1C1A17]">
+                Customer Orders ({orders.length})
+              </h3>
+              <p className="text-xs text-[#5C564F]">
+                Manage fulfillment status, assign courier tracking, or export orders for dispatch sheets.
+              </p>
+            </div>
+            {orders.length > 0 && (
+              <button
+                type="button"
+                onClick={exportOrdersToCsv}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1C1A17] text-white text-xs font-semibold hover:bg-[#9E4733] transition-colors cursor-pointer self-start sm:self-auto"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                Download Orders CSV
+              </button>
+            )}
+          </div>
+
           {orders.length === 0 ? (
             <div className="bg-white rounded-2xl border border-[#E6DFD3] p-12 text-center">
               <ShoppingBag className="w-10 h-10 text-[#9E4733] mx-auto mb-3" />

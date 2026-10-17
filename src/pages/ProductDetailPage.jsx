@@ -58,8 +58,12 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [validationError, setValidationError] = useState('');
   const [openAccordion, setOpenAccordion] = useState('story'); // 'story' | 'specs' | 'shipping' | ''
+  const [reviewFilterStar, setReviewFilterStar] = useState(0); // 0 = All stars, 1-5 = specific star
+  const [reviewSort, setReviewSort] = useState('newest'); // 'newest' | 'highest' | 'lowest'
+  const [showStickyBar, setShowStickyBar] = useState(false);
 
   const reviewsSectionRef = useRef(null);
+  const purchaseBoxRef = useRef(null);
   const trackedProductIdRef = useRef(null);
 
   // Review form state
@@ -82,9 +86,22 @@ export default function ProductDetailPage() {
       setSelectedSize(product.variants?.sizes?.[0] || '');
       setQuantity(1);
       setValidationError('');
+      setReviewFilterStar(0);
+      setReviewSort('newest');
       recordProductView(product.id);
     }
   }, [product, recordProductView]);
+
+  // Show sticky bottom purchase bar when user scrolls past the main purchase box
+  useEffect(() => {
+    const onScroll = () => {
+      if (!purchaseBoxRef.current) return;
+      const rect = purchaseBoxRef.current.getBoundingClientRect();
+      setShowStickyBar(rect.bottom < 80);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const relatedProducts = useMemo(() => {
     if (!product) return [];
@@ -525,7 +542,10 @@ export default function ProductDetailPage() {
             </div>
 
             {/* 4. Purchase Actions Box */}
-            <div className="p-5 rounded-xl bg-white border border-stone-200 shadow-2xs space-y-3.5">
+            <div
+              ref={purchaseBoxRef}
+              className="p-5 rounded-xl bg-white border border-stone-200 shadow-2xs space-y-3.5"
+            >
               <div className="flex items-center gap-3">
                 {/* Quantity Selector */}
                 <div
@@ -802,24 +822,41 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
-              {/* Middle: 5-Star to 1-Star Distribution Bars */}
-              <div className="lg:col-span-5 space-y-2">
-                {ratingBreakdown.map((item) => (
-                  <div key={item.star} className="flex items-center gap-3 text-xs">
-                    <span className="w-12 font-semibold text-stone-700 inline-flex items-center gap-1">
-                      {item.star} <Star className="w-3 h-3 fill-[#C59B5F] text-[#C59B5F]" />
-                    </span>
-                    <div className="flex-1 h-2.5 rounded-full bg-stone-100 overflow-hidden border border-stone-200/60">
-                      <div
-                        className="h-full bg-[#C59B5F] rounded-full transition-all duration-500"
-                        style={{ width: `${item.percent}%` }}
-                      />
-                    </div>
-                    <span className="w-10 text-right text-stone-500 font-mono">
-                      {item.count}
-                    </span>
-                  </div>
-                ))}
+              {/* Middle: Interactive Click-to-Filter 5-Star to 1-Star Distribution Bars */}
+              <div className="lg:col-span-5 space-y-1.5">
+                <p className="text-[11px] text-stone-500 mb-1">
+                  Click a star rating below to filter customer reviews:
+                </p>
+                {ratingBreakdown.map((item) => {
+                  const isActiveStar = reviewFilterStar === item.star;
+                  return (
+                    <button
+                      key={item.star}
+                      type="button"
+                      onClick={() =>
+                        setReviewFilterStar((prev) => (prev === item.star ? 0 : item.star))
+                      }
+                      className={`w-full flex items-center gap-3 text-xs px-2 py-1 rounded-lg transition-colors cursor-pointer ${
+                        isActiveStar
+                          ? 'bg-[#B85338]/10 ring-1 ring-[#B85338]'
+                          : 'hover:bg-stone-50'
+                      }`}
+                    >
+                      <span className="w-12 font-semibold text-stone-700 inline-flex items-center gap-1">
+                        {item.star} <Star className="w-3 h-3 fill-[#C59B5F] text-[#C59B5F]" />
+                      </span>
+                      <div className="flex-1 h-2.5 rounded-full bg-stone-100 overflow-hidden border border-stone-200/60">
+                        <div
+                          className="h-full bg-[#C59B5F] rounded-full transition-all duration-500"
+                          style={{ width: `${item.percent}%` }}
+                        />
+                      </div>
+                      <span className="w-10 text-right text-stone-500 font-mono">
+                        {item.count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Right: Authenticity Badge */}
@@ -838,77 +875,142 @@ export default function ProductDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 pt-10">
               {/* Left 7 Cols: Customer Reviews Feed */}
               <div className="lg:col-span-7 space-y-4">
-                <h3 className="font-serif text-xl font-semibold text-[#1C1917]">
-                  Showing {realReviewCount} {realReviewCount === 1 ? 'Review' : 'Reviews'}
-                </h3>
-
-                {realReviewCount === 0 ? (
-                  <div className="p-8 rounded-xl bg-[#FAF7F2] border border-stone-200 text-center space-y-2">
-                    <p className="text-sm font-semibold text-[#1C1917]">
-                      No customer reviews yet for this piece
-                    </p>
-                    <p className="text-xs text-stone-500">
-                      Have you experienced the craftsmanship of {product.name}? Share your first review using the form on the right.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {productReviews.map((rev) => (
-                      <article
-                        key={rev.id}
-                        className="p-5 rounded-xl bg-[#FAF7F2] border border-stone-200 space-y-3 transition-colors hover:border-stone-300"
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-serif text-xl font-semibold text-[#1C1917]">
+                      {reviewFilterStar > 0
+                        ? `${reviewFilterStar}-Star Reviews`
+                        : `Showing All ${realReviewCount} ${
+                            realReviewCount === 1 ? 'Review' : 'Reviews'
+                          }`}
+                    </h3>
+                    {reviewFilterStar > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setReviewFilterStar(0)}
+                        className="px-2.5 py-1 rounded-full bg-stone-100 hover:bg-stone-200 text-[11px] font-semibold text-[#B85338] cursor-pointer"
                       >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-[#1C1917] text-[#FAF7F2] flex items-center justify-center text-xs font-bold uppercase">
-                              {(rev.author || 'C')[0]}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-[#1C1917]">
-                                  {rev.author}
-                                </span>
-                                {rev.location && (
-                                  <span className="text-[11px] text-stone-500">
-                                    · {rev.location}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <div className="flex text-[#C59B5F]">
-                                  {Array.from({ length: 5 }).map((_, idx) => (
-                                    <Star
-                                      key={idx}
-                                      className={`w-3 h-3 ${
-                                        idx < Number(rev.rating || 5)
-                                          ? 'fill-current'
-                                          : 'text-stone-300'
-                                      }`}
-                                    />
-                                  ))}
-                                </div>
-                                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-semibold">
-                                  Verified Collector
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <time className="text-[11px] text-stone-400 font-mono">
-                            {rev.date}
-                          </time>
-                        </div>
-
-                        {rev.title && (
-                          <h4 className="text-sm font-semibold text-[#1C1917]">{rev.title}</h4>
-                        )}
-
-                        <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
-                          {rev.comment}
-                        </p>
-                      </article>
-                    ))}
+                        Clear Filter ×
+                      </button>
+                    )}
                   </div>
-                )}
+
+                  {realReviewCount > 1 && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-stone-500">Sort by:</span>
+                      <select
+                        value={reviewSort}
+                        onChange={(e) => setReviewSort(e.target.value)}
+                        aria-label="Sort reviews"
+                        className="bg-[#FAF7F2] border border-stone-300 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#1C1917]"
+                      >
+                        <option value="newest">Newest First</option>
+                        <option value="highest">Highest Rating</option>
+                        <option value="lowest">Lowest Rating</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                {(() => {
+                  const filteredReviews = productReviews
+                    .filter((r) =>
+                      reviewFilterStar > 0
+                        ? Math.round(Number(r.rating || 5)) === reviewFilterStar
+                        : true
+                    )
+                    .sort((a, b) => {
+                      if (reviewSort === 'highest')
+                        return Number(b.rating || 5) - Number(a.rating || 5);
+                      if (reviewSort === 'lowest')
+                        return Number(a.rating || 5) - Number(b.rating || 5);
+                      return String(b.date || '').localeCompare(String(a.date || ''));
+                    });
+
+                  if (filteredReviews.length === 0) {
+                    return (
+                      <div className="p-8 rounded-xl bg-[#FAF7F2] border border-stone-200 text-center space-y-2">
+                        <p className="text-sm font-semibold text-[#1C1917]">
+                          {reviewFilterStar > 0
+                            ? `No ${reviewFilterStar}-star reviews yet for this piece`
+                            : 'No customer reviews yet for this piece'}
+                        </p>
+                        <p className="text-xs text-stone-500">
+                          {reviewFilterStar > 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => setReviewFilterStar(0)}
+                              className="text-[#B85338] underline font-semibold cursor-pointer"
+                            >
+                              Show all {realReviewCount} reviews
+                            </button>
+                          ) : (
+                            `Have you experienced the craftsmanship of ${product.name}? Share your first review using the form on the right.`
+                          )}
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-4">
+                      {filteredReviews.map((rev) => (
+                        <article
+                          key={rev.id}
+                          className="p-5 rounded-xl bg-[#FAF7F2] border border-stone-200 space-y-3 transition-colors hover:border-stone-300"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-[#1C1917] text-[#FAF7F2] flex items-center justify-center text-xs font-bold uppercase">
+                                {(rev.author || 'C')[0]}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold text-[#1C1917]">
+                                    {rev.author}
+                                  </span>
+                                  {rev.location && (
+                                    <span className="text-[11px] text-stone-500">
+                                      · {rev.location}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <div className="flex text-[#C59B5F]">
+                                    {Array.from({ length: 5 }).map((_, idx) => (
+                                      <Star
+                                        key={idx}
+                                        className={`w-3 h-3 ${
+                                          idx < Number(rev.rating || 5)
+                                            ? 'fill-current'
+                                            : 'text-stone-300'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-semibold">
+                                    Verified Collector
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <time className="text-[11px] text-stone-400 font-mono">
+                              {rev.date}
+                            </time>
+                          </div>
+
+                          {rev.title && (
+                            <h4 className="text-sm font-semibold text-[#1C1917]">{rev.title}</h4>
+                          )}
+
+                          <p className="text-xs sm:text-sm text-stone-600 leading-relaxed">
+                            {rev.comment}
+                          </p>
+                        </article>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Right 5 Cols: Write a Customer Review Form */}
@@ -1197,6 +1299,56 @@ export default function ProductDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Sticky Bottom Add-to-Bag Bar (Shows when main purchase box scrolls out of view) */}
+      {showStickyBar && (
+        <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200 shadow-2xl py-3 px-4 sm:px-6 animate-in slide-in-from-bottom duration-200">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <img
+                src={product.images?.[0]}
+                alt={product.name}
+                className="w-11 h-12 rounded-lg object-cover border border-stone-200 shrink-0 hidden xs:block"
+              />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-semibold text-[#1C1917] truncate">
+                  {product.name}
+                </p>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-bold text-[#B85338]">{formatPrice(product.price)}</span>
+                  {(selectedColor || selectedSize) && (
+                    <span className="text-stone-500 truncate hidden sm:inline">
+                      · {[selectedColor, selectedSize].filter(Boolean).join(' / ')}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={isOutOfStock}
+                className="px-4 sm:px-6 py-2.5 rounded-lg bg-[#1C1917] hover:bg-[#B85338] disabled:bg-stone-300 text-white text-xs font-semibold uppercase tracking-wider inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>{isOutOfStock ? 'Sold Out' : 'Add to Bag'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleBuyNow}
+                disabled={isOutOfStock}
+                className="hidden sm:inline-flex px-4 py-2.5 rounded-lg bg-[#B85338] hover:bg-[#983F27] disabled:bg-stone-200 text-white text-xs font-semibold uppercase tracking-wider items-center gap-1.5 cursor-pointer transition-colors"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>Buy Now</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

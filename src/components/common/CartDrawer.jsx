@@ -8,6 +8,8 @@ export default function CartDrawer() {
     isCartDrawerOpen,
     setIsCartDrawerOpen,
     cart,
+    products,
+    addToCart,
     cartTotals,
     updateCartQuantity,
     removeFromCart,
@@ -189,6 +191,70 @@ export default function CartDrawer() {
               </div>
             ))
           )}
+
+          {/* One-Click Recommended Upsell to Unlock Free Shipping */}
+          {cart.length > 0 &&
+            !cartTotals.qualifiesForFreeShipping &&
+            (() => {
+              const inCartIds = new Set(cart.map((c) => c.id));
+              const candidates = (products || []).filter(
+                (p) => !inCartIds.has(p.id) && Number(p.stock) > 0
+              );
+              const bestMatch =
+                candidates
+                  .sort((a, b) => Number(a.price) - Number(b.price))
+                  .find((p) => Number(p.price) >= cartTotals.amountUntilFreeShipping) ||
+                candidates[0];
+
+              if (!bestMatch) return null;
+
+              return (
+                <div className="mt-4 pt-4 border-t border-stone-200/80">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#9E4733] mb-2">
+                    Complete Your Order · Unlock Free Delivery
+                  </p>
+                  <div className="flex items-center gap-3 bg-white p-3 rounded-lg border border-[#E6DFD3] shadow-2xs">
+                    <Link
+                      to={`/product/${bestMatch.slug}`}
+                      onClick={() => setIsCartDrawerOpen(false)}
+                      className="shrink-0"
+                    >
+                      <img
+                        src={bestMatch.images?.[0]}
+                        alt={bestMatch.name}
+                        className="w-12 h-14 rounded object-cover bg-stone-100 border border-stone-200"
+                      />
+                    </Link>
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        to={`/product/${bestMatch.slug}`}
+                        onClick={() => setIsCartDrawerOpen(false)}
+                        className="text-xs font-semibold text-[#1C1917] hover:text-[#B85338] line-clamp-1 block"
+                      >
+                        {bestMatch.name}
+                      </Link>
+                      <span className="text-xs font-medium text-stone-600">
+                        {formatPrice(bestMatch.price)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        addToCart(
+                          bestMatch,
+                          1,
+                          bestMatch.colors?.[0]?.name || 'Standard',
+                          bestMatch.sizes?.[0] || 'One Size'
+                        )
+                      }
+                      className="px-3 py-1.5 rounded bg-[#1C1917] text-white text-[11px] font-semibold hover:bg-[#B85338] transition-colors shrink-0 cursor-pointer"
+                    >
+                      + Add
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
         </div>
 
         {/* Drawer Footer */}
