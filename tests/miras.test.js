@@ -282,5 +282,29 @@ test('7. Hono Cloudflare Worker: Google Sign-In (/api/auth/google) authenticates
   const adminData = await googleAdminRes.json();
   assert.equal(adminData.user.role, 'admin');
   assert.ok(adminData.token);
+
+  // Test profile & saved addresses update
+  const profileRes = await app.fetch(
+    new Request('http://localhost/api/auth/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'amina.khalid@gmail.com',
+        firstName: 'Amina',
+        lastName: 'Khalid',
+        phone: '03009998877',
+        savedAddresses: [{ id: 'addr-1', city: 'Lahore', addressLine1: '12 Gulberg III' }],
+      }),
+    })
+  );
+  assert.equal(profileRes.status, 200);
+  const profileData = await profileRes.json();
+  assert.equal(profileData.user.phone, '03009998877');
+  assert.equal(profileData.user.savedAddresses.length, 1);
+
+  // Verify regional cultural filter (Sindh, Balochistan, Kashmir, etc.)
+  const sindhProducts = filterAndSortProducts(INITIAL_PRODUCTS, { region: 'Sindh' });
+  assert.ok(sindhProducts.length >= 1);
+  assert.ok(sindhProducts.some((p) => p.name.includes('Ajrak')));
 });
 

@@ -40,6 +40,7 @@ export default function CatalogPage({ mode = 'shop' }) {
       : searchParams.get('collection') || 'all';
   const sortParam = searchParams.get('sort') || 'featured';
   const brandParam = searchParams.get('brand') || 'all';
+  const regionParam = searchParams.get('region') || '';
   const colorParam = searchParams.get('color') || '';
   const sizeParam = searchParams.get('size') || '';
   const materialParam = searchParams.get('material') || '';
@@ -79,8 +80,44 @@ export default function CatalogPage({ mode = 'shop' }) {
     const colorsMap = new Map();
     const sizesSet = new Set();
     const materialsSet = new Set();
+    const regionsSet = new Set();
 
     published.forEach((p) => {
+      const orig = p.culturalOrigin || p.origin || p.specifications?.Origin || '';
+      if (orig) {
+        const lower = orig.toLowerCase();
+        if (lower.includes('kashmir') || lower.includes('swat')) regionsSet.add('Kashmir & Swat');
+        if (lower.includes('lahore') || lower.includes('multan') || lower.includes('bahawalpur') || lower.includes('punjab')) {
+          regionsSet.add('Punjab');
+        }
+        if (lower.includes('sindh') || lower.includes('hala') || lower.includes('bhitshah') || lower.includes('karachi')) {
+          regionsSet.add('Sindh');
+        }
+        if (lower.includes('baloch') || lower.includes('quetta') || lower.includes('kalat')) {
+          regionsSet.add('Balochistan');
+        }
+        if (lower.includes('peshawar') || lower.includes('khyber') || lower.includes('kpk')) {
+          regionsSet.add('Khyber Pakhtunkhwa');
+        }
+        if (lower.includes('hunza') || lower.includes('chitral') || lower.includes('gilgit')) {
+          regionsSet.add('Gilgit-Baltistan & Chitral');
+        }
+        if (
+          !lower.includes('kashmir') &&
+          !lower.includes('punjab') &&
+          !lower.includes('lahore') &&
+          !lower.includes('multan') &&
+          !lower.includes('bahawalpur') &&
+          !lower.includes('sindh') &&
+          !lower.includes('baloch') &&
+          !lower.includes('peshawar') &&
+          !lower.includes('hunza') &&
+          orig.trim().length <= 28
+        ) {
+          regionsSet.add(orig.trim());
+        }
+      }
+
       (p.variants?.colors || []).forEach((c) => {
         const key = c.name.split(' ')[0];
         if (!colorsMap.has(key)) colorsMap.set(key, c.hex);
@@ -107,6 +144,7 @@ export default function CatalogPage({ mode = 'shop' }) {
 
     return {
       brands,
+      regions: Array.from(regionsSet),
       colors: Array.from(colorsMap.entries()).map(([name, hex]) => ({ name, hex })),
       sizes: Array.from(sizesSet),
       materials: Array.from(materialsSet),
@@ -121,6 +159,7 @@ export default function CatalogPage({ mode = 'shop' }) {
         category: categoryParam,
         collection: collectionParam,
         brand: brandParam,
+        region: regionParam,
         color: colorParam,
         size: sizeParam,
         material: materialParam,
@@ -136,6 +175,7 @@ export default function CatalogPage({ mode = 'shop' }) {
       categoryParam,
       collectionParam,
       brandParam,
+      regionParam,
       colorParam,
       sizeParam,
       materialParam,
@@ -183,6 +223,7 @@ export default function CatalogPage({ mode = 'shop' }) {
       label: `Collection: ${activeCollectionObj?.name || collectionParam}`,
     });
   }
+  if (regionParam) activeChips.push({ key: 'region', label: `Region: ${regionParam}` });
   if (brandParam !== 'all') activeChips.push({ key: 'brand', label: `Brand: ${brandParam}` });
   if (colorParam) activeChips.push({ key: 'color', label: `Color: ${colorParam}` });
   if (sizeParam) activeChips.push({ key: 'size', label: `Size: ${sizeParam}` });
@@ -288,6 +329,37 @@ export default function CatalogPage({ mode = 'shop' }) {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* Regional Provenance / Cultural Origin Filter */}
+      {facets.regions.length > 0 && (
+        <div className="pt-5 border-t border-stone-200">
+          <h3 className="font-semibold uppercase tracking-wider text-stone-700 mb-2.5">
+            Region & Heritage Origin
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
+            {facets.regions.map((reg) => {
+              const keyword = reg.split(' ')[0];
+              const isSelected =
+                regionParam.toLowerCase() === reg.toLowerCase() ||
+                regionParam.toLowerCase() === keyword.toLowerCase();
+              return (
+                <button
+                  key={reg}
+                  type="button"
+                  onClick={() => updateFilter('region', isSelected ? '' : keyword)}
+                  className={`px-2.5 py-1 rounded border text-[11px] cursor-pointer transition-colors ${
+                    isSelected
+                      ? 'bg-[#B85338] text-white border-[#B85338] font-semibold'
+                      : 'bg-white text-stone-700 border-stone-200 hover:border-[#B85338]'
+                  }`}
+                >
+                  {reg}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 

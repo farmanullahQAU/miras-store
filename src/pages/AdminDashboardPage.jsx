@@ -375,7 +375,11 @@ export default function AdminDashboardPage() {
         product.specifications?.Material ||
         product.materials ||
         'Premium Handpicked Quality',
-      origin: product.specifications?.Origin || product.origin || 'Pakistan',
+      origin:
+        product.culturalOrigin ||
+        product.specifications?.Origin ||
+        product.origin ||
+        'Lahore, Punjab',
       shippingEstimate:
         product.specifications?.Dispatch ||
         product.shippingEstimate ||
@@ -412,6 +416,8 @@ export default function AdminDashboardPage() {
       name: productForm.name.trim(),
       category: selectedCat?.name || 'Traditional & Cultural',
       categorySlug: productForm.category || selectedCat?.slug || 'traditional-cultural',
+      culturalOrigin: (productForm.origin || 'Pakistan').trim(),
+      origin: (productForm.origin || 'Pakistan').trim(),
       brand: settings.brandName || 'MIRAS',
       price: Number(productForm.price),
       originalPrice: productForm.compareAtPrice ? Number(productForm.compareAtPrice) : null,
@@ -433,7 +439,7 @@ export default function AdminDashboardPage() {
       },
       specifications: {
         Material: productForm.materials || 'Premium Quality',
-        Origin: productForm.origin || 'Pakistan',
+        Origin: (productForm.origin || 'Pakistan').trim(),
         Dispatch: productForm.shippingEstimate || 'Dispatches within 24 hours',
       },
       status: 'published',
@@ -1128,6 +1134,39 @@ export default function AdminDashboardPage() {
             </div>
 
             <div>
+              <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
+                Regional Origin / Province of Pakistan *
+              </label>
+              <input
+                type="text"
+                value={productForm.origin}
+                onChange={(e) => setProductForm({ ...productForm, origin: e.target.value })}
+                placeholder="e.g. Kashmir & Swat, Multan (Punjab), Hala (Sindh), Quetta"
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E6DFD3] text-sm"
+              />
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {[
+                  'Kashmir & Swat',
+                  'Lahore, Punjab',
+                  'Multan, South Punjab',
+                  'Bhitshah & Hala, Sindh',
+                  'Quetta, Balochistan',
+                  'Peshawar, KPK',
+                  'Hunza & Chitral, Gilgit',
+                ].map((regPreset) => (
+                  <button
+                    key={regPreset}
+                    type="button"
+                    onClick={() => setProductForm({ ...productForm, origin: regPreset })}
+                    className="px-2 py-0.5 rounded bg-[#F3EDE2] hover:bg-[#1C1A17] hover:text-white text-[10px] font-medium text-[#1C1A17] transition-colors cursor-pointer"
+                  >
+                    {regPreset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-[#1C1A17] mb-1">
                 Delivery Estimate
               </label>

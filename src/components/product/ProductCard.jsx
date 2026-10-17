@@ -210,9 +210,9 @@ export default function ProductCard({ product }) {
             {product.name}
           </Link>
 
-          {product.culturalOrigin && (
-            <p className="text-[11px] text-stone-500 mt-1 truncate">
-              {product.culturalOrigin}
+          {(product.culturalOrigin || product.origin || product.specifications?.Origin) && (
+            <p className="text-[11px] text-[#4A5D4E] font-medium mt-1 truncate">
+              Origin: {product.culturalOrigin || product.origin || product.specifications?.Origin}
             </p>
           )}
         </div>

@@ -1,7 +1,8 @@
 /**
  * MIRAS — Starter Product Catalog & Promo Codes
+ * Celebrates iconic regional crafts & heritage products from across Pakistan.
  * You can edit, delete, or clear these starter items with one click in the Admin Dashboard (/admin)
- * and list your own products.
+ * and list your own products dynamically via Cloudflare D1 & R2.
  */
 
 export const INITIAL_PRODUCTS = [
@@ -10,11 +11,12 @@ export const INITIAL_PRODUCTS = [
     name: 'Hand-Loomed Kashmiri Pashmina Sozni Shawl',
     slug: 'hand-loomed-kashmiri-pashmina-sozni-shawl',
     shortDescription:
-      'Pure highland wool shawl finished with delicate hand-embroidered Sozni borders.',
+      'Pure highland wool shawl from Kashmir & Swat finished with delicate hand-embroidered Sozni borders.',
     description:
-      'Woven on traditional wooden looms from fine highland wool, this timeless shawl features intricate needlepoint Sozni floral borders. Featherlight, warm, and delivered in a signature gift box.',
+      'Woven on traditional wooden looms from fine highland wool, this timeless shawl features intricate needlepoint Sozni floral borders crafted by master Kashmiri and Swati weavers. Featherlight, warm, and delivered in a signature MIRAS keepsake box.',
     category: 'Traditional & Cultural',
     categorySlug: 'traditional-cultural',
+    culturalOrigin: 'Kashmir & Swat Valley',
     brand: 'MIRAS Heritage',
     price: 8500,
     originalPrice: 10500,
@@ -41,11 +43,12 @@ export const INITIAL_PRODUCTS = [
       materials: ['Pure Pashmina Wool Blend'],
     },
     specifications: {
-      Material: 'Highland Wool with Sozni Embroidery',
+      Origin: 'Kashmir & Swat Valley',
+      Material: 'Highland Wool with Sozni Hand Embroidery',
       Dimensions: '100 cm × 205 cm',
       Care: 'Dry clean recommended',
     },
-    tags: ['shawl', 'pashmina', 'traditional', 'winter', 'gift'],
+    tags: ['shawl', 'pashmina', 'kashmir', 'swat', 'traditional', 'winter', 'gift'],
     reviews: [
       {
         id: 'rev-1',
@@ -60,14 +63,15 @@ export const INITIAL_PRODUCTS = [
   },
   {
     id: 'prod-002',
-    name: 'Embroidered Raw Silk Festive Kurta Set',
+    name: 'Embroidered Raw Silk Festive Kurta Set (Lahori Tilla)',
     slug: 'embroidered-raw-silk-festive-kurta-set',
     shortDescription:
-      'Two-piece tailored raw silk tunic and trouser set with subtle antique Tilla neckline work.',
+      'Two-piece tailored raw silk tunic and trouser set with authentic Lahori Dabka & Tilla work.',
     description:
-      'Designed for both festive gatherings and elevated evening wear. Tailored from breathable medium-weight raw silk with delicate Tilla embroidery along the neckline and sleeves.',
+      'Designed in our Lahore atelier for festive gatherings and elevated evening wear. Tailored from breathable medium-weight raw silk with intricate antique Tilla embroidery along the neckline and cuffs.',
     category: 'Fashion & Apparel',
     categorySlug: 'fashion-apparel',
+    culturalOrigin: 'Lahore, Punjab',
     brand: 'MIRAS Studio',
     price: 6800,
     originalPrice: 7900,
@@ -90,27 +94,29 @@ export const INITIAL_PRODUCTS = [
         { name: 'Olive Green', hex: '#4A5D4E' },
         { name: 'Obsidian Black', hex: '#1C1917' },
       ],
-      sizes: ['S', 'M', 'L', 'XL'],
+      sizes: ['XS', 'S', 'M', 'L', 'XL'],
       materials: ['Raw Silk'],
     },
     specifications: {
+      Origin: 'Lahore, Punjab',
       Includes: 'Stitched Embroidered Shirt + Straight Trousers',
       Fabric: 'Medium-weight Raw Silk',
       Fit: 'Regular Relaxed Fit',
     },
-    tags: ['kurta', 'fashion', 'silk', 'stitched', 'festive'],
+    tags: ['kurta', 'fashion', 'silk', 'lahore', 'punjab', 'stitched', 'festive'],
     reviews: [],
   },
   {
     id: 'prod-003',
-    name: 'Full-Grain Leather Weekender & Travel Bag',
+    name: 'Peshawari Hand-Stitched Full-Grain Leather Weekender Bag',
     slug: 'full-grain-leather-weekender-travel-bag',
     shortDescription:
-      'Handcrafted genuine leather travel duffle with solid brass hardware and padded shoulder strap.',
+      'Handcrafted genuine leather travel duffle from Khyber Pakhtunkhwa with solid brass hardware.',
     description:
-      'Built from durable full-grain leather that develops a rich character over time. Features a spacious main compartment, interior zippered pocket, and heavy-duty brass zippers.',
+      'Handcrafted by master leather artisans in Peshawar from vegetable-tanned full-grain cowhide that develops a rich patina over time. Features a spacious cabin compartment, interior zippered pocket, and solid brass buckles.',
     category: 'Watches, Jewelry & Bags',
     categorySlug: 'accessories-watches',
+    culturalOrigin: 'Peshawar, Khyber Pakhtunkhwa',
     brand: 'MIRAS Leather',
     price: 11500,
     originalPrice: 13500,
@@ -136,11 +142,12 @@ export const INITIAL_PRODUCTS = [
       materials: ['100% Genuine Leather'],
     },
     specifications: {
+      Origin: 'Peshawar, Khyber Pakhtunkhwa',
       Dimensions: '50 cm × 25 cm × 27 cm',
       Material: '100% Genuine Full-Grain Leather',
-      Hardware: 'Antique Brass Buckles & Zippers',
+      Hardware: 'Solid Antique Brass Buckles & Zippers',
     },
-    tags: ['bag', 'leather', 'accessories', 'travel'],
+    tags: ['bag', 'leather', 'peshawar', 'kpk', 'accessories', 'travel'],
     reviews: [],
   },
   {
@@ -153,6 +160,7 @@ export const INITIAL_PRODUCTS = [
       'Our signature fragrance collection pairs smoky Cambodi Oud, Damascus Rose, and warm Amber Musk. 100% non-alcoholic concentrated perfume oil with 12+ hour projection.',
     category: 'Gifts & Fragrances',
     categorySlug: 'gifts-lifestyle',
+    culturalOrigin: 'Lahore & Abbottabad',
     brand: 'MIRAS Scents',
     price: 3800,
     originalPrice: 4500,
@@ -175,6 +183,7 @@ export const INITIAL_PRODUCTS = [
       materials: ['Pure Concentrated Perfume Oil'],
     },
     specifications: {
+      Origin: 'Lahore & Abbottabad',
       Longevity: '12–14 Hours',
       Type: 'Alcohol-Free Pure Attar & EDP',
       Packaging: 'Ready-to-gift Velvet Lined Box',
@@ -184,14 +193,15 @@ export const INITIAL_PRODUCTS = [
   },
   {
     id: 'prod-005',
-    name: 'Heritage Kundan & Pearl Jhumka Earrings',
+    name: 'Bahawalpuri Heritage Kundan & Pearl Jhumka Earrings',
     slug: 'heritage-kundan-pearl-jhumka-earrings',
     shortDescription:
-      'Gold-plated traditional jhumka earrings handset with Kundan stones and freshwater pearl drops.',
+      'Gold-plated traditional Bahawalpuri jhumka earrings handset with Kundan stones and pearl drops.',
     description:
-      'Lightweight yet statement-making traditional earrings crafted with high-polish gold plating, uncut glass Kundan stones, and delicate pearl clusters.',
+      'Inspired by the royal court jewelry of Bahawalpur and Bikaner, these lightweight statement jhumkas are crafted with high-polish gold plating, uncut Kundan stones, and freshwater pearl clusters.',
     category: 'Watches, Jewelry & Bags',
     categorySlug: 'accessories-watches',
+    culturalOrigin: 'Bahawalpur, South Punjab',
     brand: 'MIRAS Jewels',
     price: 2950,
     originalPrice: 3600,
@@ -217,22 +227,24 @@ export const INITIAL_PRODUCTS = [
       materials: ['Gold-Plated Brass & Pearls'],
     },
     specifications: {
+      Origin: 'Bahawalpur, South Punjab',
       Weight: 'Lightweight comfortable wear',
       Packaging: 'Jewelry keepsake box included',
     },
-    tags: ['jewelry', 'earrings', 'jhumka', 'accessories', 'gift'],
+    tags: ['jewelry', 'earrings', 'jhumka', 'bahawalpur', 'accessories', 'gift'],
     reviews: [],
   },
   {
     id: 'prod-006',
-    name: 'Multani Hand-Painted Ceramic Table Vase',
+    name: 'Multani Blue Pottery Hand-Painted Ceramic Table Vase',
     slug: 'multani-hand-painted-ceramic-table-vase',
     shortDescription:
-      'Artisanal kiln-fired ceramic vase painted freehand in traditional cobalt and turquoise glazes.',
+      'Authentic Multani Kashi-gari kiln-fired ceramic vase painted freehand in cobalt and turquoise glazes.',
     description:
-      'Handcrafted by master potters in Multan, this ceramic vessel brings timeless regional character to living rooms, dining tables, and office desks.',
+      'Handcrafted by master Kashi-gari potters in Multan, this ceramic vessel celebrates centuries-old South Punjab glaze artistry and brings timeless regional character to living rooms and dining tables.',
     category: 'Home & Décor',
     categorySlug: 'home-decor',
+    culturalOrigin: 'Multan, South Punjab',
     brand: 'MIRAS Home',
     price: 4200,
     originalPrice: null,
@@ -241,7 +253,7 @@ export const INITIAL_PRODUCTS = [
     stockStatus: 'in_stock',
     rating: 4.9,
     reviewCount: 11,
-    featured: false,
+    featured: true,
     isBestSeller: false,
     isNew: true,
     status: 'published',
@@ -258,10 +270,143 @@ export const INITIAL_PRODUCTS = [
       materials: ['Glazed Ceramic'],
     },
     specifications: {
+      Origin: 'Multan, South Punjab',
       Height: '28 cm',
       Packaging: 'Double-boxed shatter-proof foam packaging',
     },
-    tags: ['home', 'decor', 'vase', 'multani', 'ceramics'],
+    tags: ['home', 'decor', 'vase', 'multan', 'punjab', 'ceramics'],
+    reviews: [],
+  },
+  {
+    id: 'prod-007',
+    name: 'Authentic Sindhi Block-Printed Natural Indigo Ajrak Shawl',
+    slug: 'authentic-sindhi-block-printed-natural-indigo-ajrak-shawl',
+    shortDescription:
+      '16-stage hand block-printed Sindhi Ajrak crafted in Bhitshah & Hala using natural indigo and madder dyes.',
+    description:
+      'An iconic symbol of Indus Valley heritage. Hand-stamped using carved wooden blocks in Bhitshah and Hala, Sindh, through a traditional 16-step natural dyeing process in deep indigo and crimson madder.',
+    category: 'Traditional & Cultural',
+    categorySlug: 'traditional-cultural',
+    culturalOrigin: 'Bhitshah & Hala, Sindh',
+    brand: 'MIRAS Heritage',
+    price: 4500,
+    originalPrice: 5400,
+    sku: 'MRS-007',
+    stock: 25,
+    stockStatus: 'in_stock',
+    rating: 5.0,
+    reviewCount: 29,
+    featured: true,
+    isBestSeller: true,
+    isNew: true,
+    status: 'published',
+    images: [
+      'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=1000&q=85',
+      'https://images.unsplash.com/photo-1606722590583-6951b5ea92ad?auto=format&fit=crop&w=1000&q=85',
+    ],
+    variants: {
+      colors: [
+        { name: 'Crimson & Natural Indigo', hex: '#6B2737' },
+        { name: 'Deep Indigo & Ivory', hex: '#1E3A8A' },
+      ],
+      sizes: ['Double-Patterned Shawl (2.5 Meters)'],
+      materials: ['100% Organic Cotton'],
+    },
+    specifications: {
+      Origin: 'Bhitshah & Hala, Sindh',
+      Technique: '16-Stage HandCarved Wooden Block Print',
+      Fabric: '100% Breathable Organic Cotton',
+      Dimensions: '100 cm × 250 cm',
+    },
+    tags: ['ajrak', 'sindh', 'sindhi', 'shawl', 'traditional', 'indigo', 'block-print'],
+    reviews: [],
+  },
+  {
+    id: 'prod-008',
+    name: 'Balochi Doch Mirror-Work Embroidered Heritage Tunic',
+    slug: 'balochi-doch-mirror-work-embroidered-heritage-tunic',
+    shortDescription:
+      'Hand-stitched geometric Balochi Doch embroidery with traditional shisha mirror-work from Quetta & Kalat.',
+    description:
+      'Featuring authentic Balochi Doch needlework painstakingly hand-stitched by female artisans in Quetta and Kalat. Accented with traditional shisha mirror-work on breathable premium cotton-silk fabric.',
+    category: 'Fashion & Apparel',
+    categorySlug: 'fashion-apparel',
+    culturalOrigin: 'Quetta & Kalat, Balochistan',
+    brand: 'MIRAS Studio',
+    price: 7400,
+    originalPrice: 8800,
+    sku: 'MRS-008',
+    stock: 14,
+    stockStatus: 'in_stock',
+    rating: 4.9,
+    reviewCount: 21,
+    featured: true,
+    isBestSeller: true,
+    isNew: true,
+    status: 'published',
+    images: [
+      'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1000&q=85',
+      'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1000&q=85',
+    ],
+    variants: {
+      colors: [
+        { name: 'Midnight Black & Ruby Doch', hex: '#1C1917' },
+        { name: 'Emerald & Gold Mirror', hex: '#065F46' },
+      ],
+      sizes: ['XS', 'S', 'M', 'L', 'XL'],
+      materials: ['Cotton Silk Blend'],
+    },
+    specifications: {
+      Origin: 'Quetta & Kalat, Balochistan',
+      Embroidery: 'Hand-Stitched Balochi Doch & Shisha Mirror Work',
+      Fabric: 'Premium Cotton-Silk Blend',
+      Fit: 'Traditional Tailored Silhouette',
+    },
+    tags: ['balochi', 'balochistan', 'quetta', 'embroidery', 'kurta', 'fashion', 'traditional'],
+    reviews: [],
+  },
+  {
+    id: 'prod-009',
+    name: 'Hunza & Chitrali Hand-Spun Pure Woolatti Chugha & Cap Set',
+    slug: 'hunza-chitrali-hand-spun-pure-wool-patti-cap-set',
+    shortDescription:
+      'Authentic hand-woven Chitrali & Hunza highland wool Pakol cap and artisanal border wrap from Gilgit-Baltistan.',
+    description:
+      'Woven from 100% pure mountain sheep wool in Chitral and Hunza Valley. Naturally weather-resistant, warm, and finished with traditional Gilgit-Baltistan geometric border motifs.',
+    category: 'Traditional & Cultural',
+    categorySlug: 'traditional-cultural',
+    culturalOrigin: 'Hunza & Chitral, Gilgit-Baltistan',
+    brand: 'MIRAS Heritage',
+    price: 5200,
+    originalPrice: 6200,
+    sku: 'MRS-009',
+    stock: 16,
+    stockStatus: 'in_stock',
+    rating: 4.9,
+    reviewCount: 19,
+    featured: true,
+    isBestSeller: false,
+    isNew: true,
+    status: 'published',
+    images: [
+      'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1000&q=85',
+      'https://images.unsplash.com/photo-1606722590583-6951b5ea92ad?auto=format&fit=crop&w=1000&q=85',
+    ],
+    variants: {
+      colors: [
+        { name: 'Walnut Earth', hex: '#78350F' },
+        { name: 'Alpine Ivory', hex: '#EDE4D7' },
+        { name: 'Slate Charcoal', hex: '#374151' },
+      ],
+      sizes: ['Standard Adjustable Fit'],
+      materials: ['100% Hand-Spun Highland Wool'],
+    },
+    specifications: {
+      Origin: 'Hunza & Chitral, Gilgit-Baltistan',
+      Material: '100% Hand-Spun Highland Patti Wool',
+      Care: 'Gentle cold hand wash or dry clean',
+    },
+    tags: ['hunza', 'chitral', 'gilgit', 'wool', 'traditional', 'winter', 'gift'],
     reviews: [],
   },
 ];
@@ -282,7 +427,16 @@ export const INITIAL_COUPONS = [
     type: 'free_shipping',
     value: 0,
     minOrderAmount: 1500,
-    description: 'Free Standard Delivery',
+    description: 'Free Standard Delivery Nationwide',
+    active: true,
+  },
+  {
+    id: 'coup-3',
+    code: 'HERITAGE15',
+    type: 'percentage',
+    value: 15,
+    minOrderAmount: 5000,
+    description: '15% OFF Regional Heritage Collection above Rs. 5,000',
     active: true,
   },
 ];

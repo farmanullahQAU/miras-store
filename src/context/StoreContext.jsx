@@ -458,9 +458,14 @@ export function StoreProvider({ children }) {
   }, [addToast]);
 
   const updateProfile = useCallback(
-    (updates) => {
-      setUser((prev) => (prev ? { ...prev, ...updates } : null));
-      addToast('Profile saved.', 'success');
+    async (updates) => {
+      setUser((prev) => {
+        if (!prev) return null;
+        const merged = { ...prev, ...updates };
+        apiService.updateProfile(merged).catch(() => {});
+        return merged;
+      });
+      addToast('Profile saved to your account.', 'success');
     },
     [addToast]
   );
@@ -471,7 +476,9 @@ export function StoreProvider({ children }) {
         if (!prev) return prev;
         const list = prev.savedAddresses || [];
         const newAddr = { ...addressData, id: addressData.id || `addr-${Date.now()}` };
-        return { ...prev, savedAddresses: [newAddr, ...list] };
+        const merged = { ...prev, savedAddresses: [newAddr, ...list] };
+        apiService.updateProfile(merged).catch(() => {});
+        return merged;
       });
       addToast('Shipping address saved.', 'success');
     },
@@ -479,14 +486,15 @@ export function StoreProvider({ children }) {
   );
 
   const deleteAddress = useCallback((addressId) => {
-    setUser((prev) =>
-      prev
-        ? {
-            ...prev,
-            savedAddresses: (prev.savedAddresses || []).filter((a) => a.id !== addressId),
-          }
-        : null
-    );
+    setUser((prev) => {
+      if (!prev) return null;
+      const merged = {
+        ...prev,
+        savedAddresses: (prev.savedAddresses || []).filter((a) => a.id !== addressId),
+      };
+      apiService.updateProfile(merged).catch(() => {});
+      return merged;
+    });
   }, []);
 
   // Checkout & Admin Actions

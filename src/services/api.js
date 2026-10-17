@@ -573,4 +573,11 @@ export const apiService = {
       body: JSON.stringify(payload),
     });
   },
+
+  async updateProfile(profilePayload) {
+    return await requestWorker('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profilePayload),
+    });
+  },
 };

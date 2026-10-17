@@ -131,6 +131,7 @@ export function filterAndSortProducts(products = [], filters = {}) {
     category = '',
     collection = '',
     brand = '',
+    region = '',
     color = '',
     size = '',
     material = '',
@@ -174,6 +175,18 @@ export function filterAndSortProducts(products = [], filters = {}) {
 
     if (brand && brand !== 'all') {
       if ((product.brand || '').toLowerCase() !== brand.toLowerCase()) {
+        return false;
+      }
+    }
+
+    if (region && region !== 'all') {
+      const originStr = (
+        product.culturalOrigin ||
+        product.origin ||
+        product.specifications?.Origin ||
+        ''
+      ).toLowerCase();
+      if (!originStr.includes(region.toLowerCase())) {
         return false;
       }
     }
@@ -226,6 +239,9 @@ export function filterAndSortProducts(products = [], filters = {}) {
         product.shortDescription,
         product.description,
         product.category,
+        product.culturalOrigin,
+        product.origin,
+        product.specifications?.Origin,
         product.brand,
         product.sku,
         ...(product.tags || []),

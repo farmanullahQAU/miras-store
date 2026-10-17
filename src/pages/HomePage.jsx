@@ -151,6 +151,85 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Explore Famous Cultural Products by Region of Pakistan */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        <div className="bg-[#F3EDE2] rounded-2xl border border-[#E6DFD3] p-6 sm:p-9">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+            <div>
+              <span className="text-xs uppercase tracking-[0.2em] text-[#9E4733] font-semibold">
+                Heritage Across Every Province
+              </span>
+              <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-[#1C1A17] mt-1">
+                Explore Crafts by Region of Pakistan
+              </h2>
+            </div>
+            <Link
+              to="/shop"
+              className="text-xs font-semibold uppercase tracking-widest text-[#1C1A17] hover:text-[#9E4733] inline-flex items-center gap-1.5"
+            >
+              Explore All Regions <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              {
+                region: 'Kashmir',
+                title: 'Kashmir & Swat',
+                craft: 'Pashmina & Sozni Shawls',
+              },
+              {
+                region: 'Punjab',
+                title: 'Punjab & Multan',
+                craft: 'Blue Pottery & Lahori Tilla',
+              },
+              {
+                region: 'Sindh',
+                title: 'Sindh (Hala & Bhitshah)',
+                craft: 'Natural Indigo Ajrak & Ralli',
+              },
+              {
+                region: 'Balochistan',
+                title: 'Balochistan (Quetta)',
+                craft: 'Balochi Doch & Mirror Work',
+              },
+              {
+                region: 'Peshawar',
+                title: 'Khyber Pakhtunkhwa',
+                craft: 'Full-Grain Leather & Brass',
+              },
+              {
+                region: 'Hunza',
+                title: 'Gilgit & Chitral',
+                craft: 'Hand-Spun Patti Wool & Caps',
+              },
+            ].map((item) => (
+              <Link
+                key={item.region}
+                to={`/shop?region=${encodeURIComponent(item.region)}`}
+                className="group bg-white hover:bg-[#1C1A17] rounded-xl p-4 border border-[#E6DFD3] hover:border-[#1C1A17] transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-[#9E4733] group-hover:text-[#C59B5F]">
+                    Region
+                  </span>
+                  <h3 className="font-serif text-base font-semibold text-[#1C1A17] group-hover:text-white mt-0.5 leading-snug">
+                    {item.title}
+                  </h3>
+                  <p className="text-[11px] text-[#5C564F] group-hover:text-white/75 mt-1 line-clamp-2">
+                    {item.craft}
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#9E4733] group-hover:text-[#C59B5F] mt-3">
+                  <span>View Craft</span>
+                  <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Featured Products Showcase with Filter Tabs */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-20">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">

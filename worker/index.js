@@ -275,6 +275,17 @@ function mapProductRow(r, reviewsByProductId = {}) {
   const price = Number(r.price);
   const originalPrice = r.original_price ? Number(r.original_price) : null;
   const prodReviews = reviewsByProductId[r.id] || [];
+  const specifications =
+    typeof r.specifications_json === 'string'
+      ? JSON.parse(r.specifications_json)
+      : r.specifications || {};
+  const culturalOrigin =
+    r.cultural_origin ||
+    r.culturalOrigin ||
+    specifications?.Origin ||
+    specifications?.Region ||
+    '';
+
   return {
     id: r.id,
     slug: r.slug,
@@ -285,6 +296,8 @@ function mapProductRow(r, reviewsByProductId = {}) {
     category: r.category,
     categoryName: r.category,
     categorySlug: r.category_slug,
+    culturalOrigin,
+    origin: culturalOrigin,
     brand: r.brand,
     price,
     originalPrice,
@@ -305,10 +318,7 @@ function mapProductRow(r, reviewsByProductId = {}) {
       typeof r.variants_json === 'string'
         ? JSON.parse(r.variants_json)
         : r.variants || { colors: [], sizes: ['Standard'], materials: [] },
-    specifications:
-      typeof r.specifications_json === 'string'
-        ? JSON.parse(r.specifications_json)
-        : r.specifications || {},
+    specifications,
     tags: typeof r.tags_json === 'string' ? JSON.parse(r.tags_json) : r.tags || [],
     createdAt: r.created_at,
     updatedAt: r.updated_at,
@@ -871,6 +881,18 @@ app.post('/api/products', async (c) => {
       ? Number(body.compareAtPrice)
       : null;
 
+  const culturalOrigin = (
+    body.culturalOrigin ||
+    body.origin ||
+    body.specifications?.Origin ||
+    'Pakistan'
+  ).trim();
+
+  const mergedSpecs = {
+    ...(body.specifications || {}),
+    Origin: culturalOrigin,
+  };
+
   const newProduct = {
     id,
     slug: body.slug || slug,
@@ -881,6 +903,8 @@ app.post('/api/products', async (c) => {
     category: body.category || 'Traditional & Cultural',
     categoryName: body.category || 'Traditional & Cultural',
     categorySlug: body.categorySlug || 'traditional-cultural',
+    culturalOrigin,
+    origin: culturalOrigin,
     brand: body.brand || 'MIRAS',
     price: Number(body.price),
     originalPrice,
@@ -897,7 +921,7 @@ app.post('/api/products', async (c) => {
     reviews: [],
     images: Array.isArray(body.images) && body.images.length > 0 ? body.images : [],
     variants: body.variants || { colors: [], sizes: ['Standard'], materials: [] },
-    specifications: body.specifications || {},
+    specifications: mergedSpecs,
     tags: body.tags || [],
   };
 
@@ -987,6 +1011,20 @@ app.put('/api/products/:id', async (c) => {
           ? Boolean(body.isFeatured)
           : currentMapped.featured;
 
+      const nextOrigin = (
+        body.culturalOrigin ||
+        body.origin ||
+        body.specifications?.Origin ||
+        currentMapped.culturalOrigin ||
+        'Pakistan'
+      ).trim();
+
+      const nextSpecs = {
+        ...(currentMapped.specifications || {}),
+        ...(body.specifications || {}),
+        Origin: nextOrigin,
+      };
+
       await c.env.DB.prepare(
         `UPDATE products SET
           sku = ?, name = ?, price = ?, original_price = ?, stock = ?, stock_status = ?,
@@ -1011,7 +1049,7 @@ app.put('/api/products/:id', async (c) => {
           merged.isBestSeller ? 1 : 0,
           JSON.stringify(merged.images || []),
           JSON.stringify(merged.variants || {}),
-          JSON.stringify(merged.specifications || {}),
+          JSON.stringify(nextSpecs),
           JSON.stringify(merged.tags || []),
           id
         )
@@ -1432,6 +1470,80 @@ app.post('/api/auth/google', async (c) => {
   );
 
   return c.json({ user, token, provider: 'google' });
+});
+
+app.put('/api/auth/profile', async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const email = (body.email || '').trim().toLowerCase();
+  if (!email) {
+    return c.json({ error: 'User email is required to update profile.' }, 400);
+  }
+
+  const firstName = (body.firstName || 'Customer').trim();
+  const lastName = (body.lastName || '').trim();
+  const phone = (body.phone || '').trim();
+  const savedAddresses = Array.isArray(body.savedAddresses) ? body.savedAddresses : [];
+  const wishlist = Array.isArray(body.wishlist) ? body.wishlist : undefined;
+
+  if (c.env?.DB) {
+    try {
+      await ensureD1Seeded(c.env.DB);
+      await c.env.DB.prepare(
+        `UPDATE users SET
+          first_name = ?,
+          last_name = ?,
+          phone = ?,
+          addresses_json = ?,
+          wishlist_json = COALESCE(?, wishlist_json),
+          updated_at = datetime('now')
+         WHERE email = ?`
+      )
+        .bind(
+          firstName,
+          lastName,
+          phone,
+          JSON.stringify(savedAddresses),
+          wishlist ? JSON.stringify(wishlist) : null,
+          email
+        )
+        .run();
+
+      const updatedRow = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?')
+        .bind(email)
+        .first();
+
+      if (updatedRow) {
+        return c.json({
+          user: {
+            id: updatedRow.id,
+            firstName: updatedRow.first_name,
+            lastName: updatedRow.last_name,
+            email: updatedRow.email,
+            phone: updatedRow.phone,
+            role: updatedRow.role,
+            savedAddresses: JSON.parse(updatedRow.addresses_json || '[]'),
+          },
+        });
+      }
+    } catch (e) {
+      console.error('D1 profile update error:', e);
+    }
+  }
+
+  edgeUsers = edgeUsers.map((u) =>
+    u.email === email ? { ...u, firstName, lastName, phone, savedAddresses } : u
+  );
+  return c.json({
+    user: edgeUsers.find((u) => u.email === email) || {
+      id: body.id || 'usr-local',
+      firstName,
+      lastName,
+      email,
+      phone,
+      role: body.role || 'customer',
+      savedAddresses,
+    },
+  });
 });
 
 // -----------------------------------------------------------------------------
